@@ -1,0 +1,79 @@
+import Link from "next/link";
+import { gradientFor } from "@/lib/format";
+import type { ReactNode } from "react";
+
+export function Stars({ rating, size = "text-sm" }: { rating: number; size?: string }) {
+  const full = Math.round(rating);
+  return (
+    <span className={`inline-flex items-center gap-0.5 ${size}`} title={`Рейтинг ${rating}`}>
+      <span className="text-amber-500">{"★".repeat(Math.max(0, full))}</span>
+      <span className="text-stone-300">{"★".repeat(Math.max(0, 5 - full))}</span>
+      {rating > 0 && <span className="ml-1 font-semibold text-stone-700">{rating}</span>}
+    </span>
+  );
+}
+
+export function LiveBadge({ small = false }: { small?: boolean }) {
+  return (
+    <span className={`chip bg-red-600 text-white ${small ? "px-2 py-0.5 text-[10px]" : ""}`}>
+      <span className="live-dot inline-block h-1.5 w-1.5 rounded-full bg-white" />
+      LIVE
+    </span>
+  );
+}
+
+export function EmojiCover({
+  emoji,
+  id,
+  className = "",
+  textSize = "text-5xl",
+}: {
+  emoji: string;
+  id: number;
+  className?: string;
+  textSize?: string;
+}) {
+  return (
+    <div className={`flex items-center justify-center bg-gradient-to-br ${gradientFor(id)} ${className}`}>
+      <span className={textSize} role="img">
+        {emoji}
+      </span>
+    </div>
+  );
+}
+
+export function SectionTitle({
+  title,
+  subtitle,
+  href,
+  linkText,
+}: {
+  title: string;
+  subtitle?: string;
+  href?: string;
+  linkText?: string;
+}) {
+  return (
+    <div className="mb-5 flex items-end justify-between gap-4">
+      <div>
+        <h2 className="text-xl font-bold sm:text-2xl">{title}</h2>
+        {subtitle && <p className="mt-1 text-sm text-stone-500">{subtitle}</p>}
+      </div>
+      {href && (
+        <Link href={href} className="shrink-0 text-sm font-semibold text-orange-600 hover:text-orange-700">
+          {linkText ?? "Все"} →
+        </Link>
+      )}
+    </div>
+  );
+}
+
+export function Empty({ icon = "🍽️", text, children }: { icon?: string; text: string; children?: ReactNode }) {
+  return (
+    <div className="card flex flex-col items-center gap-3 px-6 py-12 text-center">
+      <div className="text-4xl">{icon}</div>
+      <p className="text-sm text-stone-500">{text}</p>
+      {children}
+    </div>
+  );
+}

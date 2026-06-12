@@ -1,0 +1,132 @@
+import Link from "next/link";
+import { listChefs, listStreams, listRecipes } from "@/lib/queries";
+import { ChefCardView } from "@/components/ChefCardView";
+import { StreamCardView } from "@/components/StreamCardView";
+import { RecipeCardView } from "@/components/RecipeCardView";
+import { SectionTitle, LiveBadge } from "@/components/ui";
+
+export const dynamic = "force-dynamic";
+
+export default function Home() {
+  const chefs = listChefs().slice(0, 4);
+  const streams = listStreams().filter((s) => s.status !== "ended").slice(0, 3);
+  const liveCount = streams.filter((s) => s.status === "live").length;
+  const recipes = listRecipes().slice(0, 4);
+
+  return (
+    <div>
+      {/* Хиро */}
+      <section className="relative overflow-hidden bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950 text-white">
+        <div className="pointer-events-none absolute inset-0 opacity-25 [background:radial-gradient(60%_60%_at_70%_30%,#d8a73d_0%,transparent_60%)]" />
+        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24">
+          <div>
+            <span className="chip bg-white/10 text-orange-200 ring-1 ring-white/20">
+              🍴 Foodtech-платформа поваров и горожан
+            </span>
+            <h1 className="mt-5 text-4xl font-extrabold leading-tight sm:text-5xl">
+              Город готовит <span className="text-orange-400">вживую</span>
+            </h1>
+            <p className="mt-4 max-w-md text-lg text-stone-300">
+              Находите поваров на карте, смотрите стримы с кухонь, заказывайте блюда из эфира и общайтесь напрямую — всё в одном месте.
+            </p>
+            <div className="mt-8 flex flex-wrap gap-3">
+              <Link href="/map" className="btn bg-orange-500 px-6 py-3 text-white hover:bg-orange-600">
+                🗺️ Открыть карту
+              </Link>
+              <Link href="/streams" className="btn bg-white/10 px-6 py-3 text-white ring-1 ring-white/25 hover:bg-white/20">
+                <span className="live-dot inline-block h-2 w-2 rounded-full bg-red-500" />
+                {liveCount > 0 ? `${liveCount} эфир${liveCount === 1 ? "" : "а"} сейчас` : "Стримы"}
+              </Link>
+            </div>
+            <div className="mt-10 grid grid-cols-3 gap-4 text-center sm:max-w-sm">
+              {[
+                ["8+", "поваров рядом"],
+                ["30+", "блюд в меню"],
+                ["10%", "комиссия платформы"],
+              ].map(([n, label]) => (
+                <div key={label} className="rounded-2xl bg-white/5 px-2 py-3 ring-1 ring-white/10">
+                  <div className="text-xl font-extrabold text-orange-300">{n}</div>
+                  <div className="text-[11px] text-stone-400">{label}</div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <div className="hidden items-center justify-center md:flex">
+            <div className="relative">
+              <div className="flex h-72 w-72 items-center justify-center rounded-full bg-gradient-to-br from-orange-500/30 to-amber-500/10 text-[120px] ring-1 ring-white/10">
+                🍳
+              </div>
+              <div className="absolute -left-8 top-8 rounded-2xl bg-white px-4 py-3 text-stone-900 shadow-xl">
+                <LiveBadge small /> <span className="ml-1 text-sm font-semibold">Карбонара вживую</span>
+              </div>
+              <div className="absolute -right-6 bottom-10 rounded-2xl bg-white px-4 py-3 text-stone-900 shadow-xl">
+                <span className="text-sm font-semibold">⭐ 4.9 · Нино Геловани</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Как это работает */}
+      <section className="mx-auto max-w-7xl px-4 py-14 sm:px-6">
+        <SectionTitle title="Как работает ForkWork" subtitle="Три шага от голода до горячего блюда" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {[
+            ["🗺️", "Найдите повара", "Интерактивная карта с фильтрами по кухне, цене, рейтингу и live-статусу."],
+            ["📺", "Смотрите эфир", "Повар готовит в прямом эфире: чат, реакции и заказ блюда прямо из стрима."],
+            ["🛵", "Получите заказ", "Оплата кошельком ForkCoins, статус заказа в реальном времени, отзыв после."],
+          ].map(([emoji, title, text]) => (
+            <div key={title} className="card p-6">
+              <div className="text-3xl">{emoji}</div>
+              <h3 className="mt-3 font-bold">{title}</h3>
+              <p className="mt-1.5 text-sm text-stone-500">{text}</p>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* Стримы */}
+      <section className="mx-auto max-w-7xl px-4 py-6 sm:px-6">
+        <SectionTitle title="Сейчас в эфире" subtitle="Подключайтесь к открытому чату и заказывайте из стрима" href="/streams" linkText="Все стримы" />
+        <div className="grid gap-4 md:grid-cols-3">
+          {streams.map((s) => (
+            <StreamCardView key={s.id} stream={s} />
+          ))}
+        </div>
+      </section>
+
+      {/* Повара */}
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+        <SectionTitle title="Лучшие повара недели" subtitle="Рейтинг считается по отзывам реальных заказов" href="/chefs" linkText="Все повара" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {chefs.map((c) => (
+            <ChefCardView key={c.id} chef={c} />
+          ))}
+        </div>
+      </section>
+
+      {/* Рецепты */}
+      <section className="mx-auto max-w-7xl px-4 py-6 pb-10 sm:px-6">
+        <SectionTitle title="Свежие рецепты" subtitle="Повара делятся фирменными секретами" href="/recipes" linkText="Все рецепты" />
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {recipes.map((r) => (
+            <RecipeCardView key={r.id} recipe={r} />
+          ))}
+        </div>
+      </section>
+
+      {/* CTA для поваров */}
+      <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
+        <div className="card flex flex-col items-center gap-4 bg-gradient-to-r from-orange-500 to-amber-500 p-10 text-center text-white ring-0 md:flex-row md:justify-between md:text-left">
+          <div>
+            <h3 className="text-2xl font-extrabold">Готовите так, что соседи занимают очередь?</h3>
+            <p className="mt-1 text-orange-50">Станьте поваром ForkWork: стримы, заказы и монетизация ваших рецептов.</p>
+          </div>
+          <Link href="/register?role=chef" className="btn shrink-0 bg-white px-6 py-3 text-orange-600 hover:bg-orange-50">
+            👨‍🍳 Стать поваром
+          </Link>
+        </div>
+      </section>
+    </div>
+  );
+}
