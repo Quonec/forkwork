@@ -5,7 +5,7 @@ import { fmtDateTime } from "@/lib/format";
 
 export function StreamCardView({ stream }: { stream: StreamInfo }) {
   return (
-    <Link href={`/streams/${stream.id}`} className="card group block overflow-hidden transition-shadow hover:shadow-md">
+    <Link href={`/streams/${stream.id}`} className="card group block overflow-hidden transition hover:ring-stone-400">
       <div className="relative">
         <Monogram label={stream.title} id={stream.id} className="h-32 w-full" textSize="text-5xl" />
         <div className="absolute left-3 top-3">

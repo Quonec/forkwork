@@ -1,65 +1,63 @@
 @import "tailwindcss";
 
-/* Палитра «светлая охра»: тёплые песочно-золотистые токены поверх стандартных
-   имён Tailwind — весь интерфейс окрашивается единообразно, без правки разметки */
+/* Палитра «светлая охра» поверх стандартных имён Tailwind — весь интерфейс
+   окрашивается единообразно, без правки разметки. Оттенки облегчены,
+   stone-950 играет роль фирменного «чёрного» в духе Uber */
 @theme {
-  --color-white: #fffdf7; /* тёплый белый для карточек и кнопок */
+  --color-white: #fffefb;
 
-  --color-stone-50: #f9f4e6;
-  --color-stone-100: #f3ebd4;
-  --color-stone-200: #e8dbbb;
-  --color-stone-300: #d6c49b;
-  --color-stone-400: #b1a17d;
-  --color-stone-500: #8d7d5c;
-  --color-stone-600: #6e6147;
-  --color-stone-700: #554b37;
-  --color-stone-800: #3f3828;
-  --color-stone-900: #2d271c;
-  --color-stone-950: #1e1911;
+  --color-stone-50: #faf6ec;
+  --color-stone-100: #f5eedb;
+  --color-stone-200: #ecdfc4;
+  --color-stone-300: #ddcca7;
+  --color-stone-400: #c0b08e;
+  --color-stone-500: #9c8c6c;
+  --color-stone-600: #7c6e54;
+  --color-stone-700: #60553f;
+  --color-stone-800: #48402e;
+  --color-stone-900: #332d20;
+  --color-stone-950: #171410;
 
-  --color-orange-50: #fcf5df;
-  --color-orange-100: #f8eac1;
-  --color-orange-200: #f0d793;
-  --color-orange-300: #e5bf63;
-  --color-orange-400: #d8a73d;
-  --color-orange-500: #c98f1d; /* светлая охра — главный акцент */
-  --color-orange-600: #aa7613;
-  --color-orange-700: #895d0f;
-  --color-orange-800: #69470d;
-  --color-orange-900: #513709;
-  --color-orange-950: #2e1f05;
+  --color-orange-50: #fdf7e5;
+  --color-orange-100: #faeeca;
+  --color-orange-200: #f3dd9f;
+  --color-orange-300: #e9c772;
+  --color-orange-400: #ddb14d;
+  --color-orange-500: #d09c2e; /* светлая охра — акцент */
+  --color-orange-600: #b28324;
+  --color-orange-700: #8f6818;
+  --color-orange-800: #6e4f12;
+  --color-orange-900: #553d0c;
+  --color-orange-950: #30220a;
 
-  --color-amber-50: #fdf8e7;
-  --color-amber-100: #f9efcb;
-  --color-amber-200: #f2dfa0;
-  --color-amber-300: #e8cb71;
-  --color-amber-400: #dcb247;
-  --color-amber-500: #ce9a28;
-  --color-amber-600: #b48218;
-  --color-amber-700: #926711;
-  --color-amber-800: #704f0f;
-  --color-amber-900: #563c0b;
+  --color-amber-50: #fdf9ec;
+  --color-amber-100: #faf2d4;
+  --color-amber-200: #f4e3ad;
+  --color-amber-300: #ecd180;
+  --color-amber-400: #e0ba55;
+  --color-amber-500: #d4a534;
+  --color-amber-600: #b98d22;
+  --color-amber-700: #967017;
+  --color-amber-800: #745612;
+  --color-amber-900: #59420d;
 }
 
 body {
-  @apply bg-stone-50 text-stone-900 antialiased;
-  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  letter-spacing: 0.01em;
-  background-image:
-    radial-gradient(900px 480px at 85% -8%, rgb(201 143 29 / 0.08), transparent 60%),
-    radial-gradient(700px 420px at -10% 30%, rgb(216 167 61 / 0.06), transparent 55%);
-  background-attachment: fixed;
+  @apply bg-white text-stone-950 antialiased;
+  font-family: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.01em;
 }
 
-/* Акцидентная гарнитура для монограмм и крупных заголовков */
+/* Акцидентный гротеск для монограмм, цифр и крупных заголовков */
 .font-display {
-  font-family: Georgia, "Times New Roman", serif;
-  letter-spacing: -0.01em;
+  font-family: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
 }
 
 @layer components {
   .card {
-    @apply bg-white rounded-xl ring-1 ring-stone-200/70 shadow-sm;
+    @apply bg-white rounded-xl ring-1 ring-stone-200;
   }
   .btn,
   .btn-primary,
@@ -69,19 +67,19 @@ body {
     @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-primary {
-    @apply bg-orange-500 text-white hover:bg-orange-600;
+    @apply bg-stone-950 text-white hover:bg-stone-800;
   }
   .btn-secondary {
-    @apply bg-stone-100 text-stone-800 hover:bg-stone-200;
+    @apply bg-stone-100 text-stone-900 hover:bg-stone-200;
   }
   .btn-ghost {
-    @apply text-stone-600 hover:bg-stone-100;
+    @apply text-stone-700 hover:bg-stone-100;
   }
   .btn-danger {
     @apply bg-red-50 text-red-600 hover:bg-red-100;
   }
   .input {
-    @apply w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-stone-400;
+    @apply w-full rounded-lg border border-transparent bg-stone-100 px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-stone-950 focus:bg-white placeholder:text-stone-500;
   }
   .chip {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;

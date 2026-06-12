@@ -100,7 +100,7 @@ export default function StreamRoom({
         {/* Левая колонка: видео + инфо */}
         <div className="space-y-4">
           {/* «Видео» */}
-          <div className="relative aspect-video overflow-hidden rounded-2xl bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950 ring-1 ring-stone-800">
+          <div className="relative aspect-video overflow-hidden rounded-xl bg-stone-950">
             <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
               <div className="steam mb-2 text-2xl font-bold text-orange-300/70">
                 <span>~</span>
@@ -126,7 +126,7 @@ export default function StreamRoom({
             {/* Плавающие реакции */}
             <div className="pointer-events-none absolute bottom-4 right-6">
               {floats.map((f) => (
-                <span key={f.id} className="chip absolute bottom-0 right-0 animate-[steam_2.5s_ease-out] bg-orange-500/90 text-white">
+                <span key={f.id} className="chip absolute bottom-0 right-0 animate-[steam_2.5s_ease-out] bg-white font-semibold text-stone-950">
                   {f.emoji}
                 </span>
               ))}
@@ -166,21 +166,21 @@ export default function StreamRoom({
 
           {/* AI-агент */}
           {analysis && (
-            <div className="card border border-violet-200 bg-gradient-to-r from-violet-50 to-fuchsia-50 p-4">
+            <div className="card bg-stone-50 p-4">
               <div className="flex items-center gap-2">
-                <span className="font-display flex h-6 w-6 items-center justify-center rounded-md bg-violet-600 text-[10px] font-bold text-white">AI</span>
-                <p className="text-xs font-bold uppercase tracking-wide text-violet-600">AI-агент анализирует эфир</p>
+                <span className="font-display flex h-6 w-6 items-center justify-center rounded-md bg-stone-950 text-[10px] text-white">AI</span>
+                <p className="text-xs font-bold uppercase tracking-wide text-stone-700">AI-агент анализирует эфир</p>
               </div>
               <p className="mt-2 text-sm text-stone-700">{analysis.summary}</p>
               {analysis.detected && (
-                <div className="mt-3 flex items-center justify-between rounded-xl bg-white p-3 ring-1 ring-violet-100">
+                <div className="mt-3 flex items-center justify-between rounded-lg bg-white p-3 ring-1 ring-stone-200">
                   <div className="flex items-center gap-2">
-                    <span className="font-display flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-sm font-bold text-violet-700">
+                    <span className="font-display flex h-9 w-9 items-center justify-center rounded-lg bg-orange-100 text-sm text-stone-900/60">
                       {analysis.detected.name.trim().charAt(0).toUpperCase()}
                     </span>
                     <div>
                       <p className="text-sm font-bold">{analysis.detected.name}</p>
-                      <p className="text-[11px] text-violet-500">распознано · уверенность {analysis.detected.confidence}%</p>
+                      <p className="text-[11px] text-stone-500">распознано · уверенность {analysis.detected.confidence}%</p>
                     </div>
                   </div>
                   {dishes.find((d) => d.id === analysis.detected!.id) && (
@@ -193,7 +193,7 @@ export default function StreamRoom({
               {analysis.tags.length > 0 && (
                 <div className="mt-2.5 flex flex-wrap gap-1.5">
                   {analysis.tags.map((t) => (
-                    <span key={t} className="chip bg-white text-violet-600 ring-1 ring-violet-100">#{t}</span>
+                    <span key={t} className="chip bg-white text-stone-600 ring-1 ring-stone-200">#{t}</span>
                   ))}
                 </div>
               )}

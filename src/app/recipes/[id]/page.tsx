@@ -28,7 +28,7 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
           <p className="mt-2 text-stone-600">{recipe.description}</p>
 
           {chef && (
-            <Link href={`/chefs/${chef.id}`} className="mt-4 flex w-fit items-center gap-3 rounded-2xl bg-stone-50 px-4 py-3 transition-colors hover:bg-orange-50">
+            <Link href={`/chefs/${chef.id}`} className="mt-4 flex w-fit items-center gap-3 rounded-xl bg-stone-50 px-4 py-3 transition-colors hover:bg-stone-100">
               <span className="font-display flex h-10 w-10 items-center justify-center rounded-full bg-white text-base font-bold text-orange-700 ring-1 ring-stone-200">
                 {chef.name.trim().charAt(0).toUpperCase()}
               </span>
