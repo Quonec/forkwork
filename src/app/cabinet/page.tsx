@@ -115,14 +115,23 @@ function Cabinet() {
           <StatCard label="В избранном" value={String(favorites.length)} />
           <StatCard label="Баланс" value={fmtFC(balance)} />
           <StatCard label="Активных заказов" value={String(orders.filter((o) => !["done", "cancelled"].includes(o.status)).length)} />
-          <div className="card col-span-full p-6">
-            <h3 className="font-bold">Быстрые действия</h3>
-            <div className="mt-3 flex flex-wrap gap-2">
-              <Link href="/map" className="btn-secondary text-xs">Карта поваров</Link>
-              <Link href="/streams" className="btn-secondary text-xs">Стримы</Link>
-              <Link href="/chats" className="btn-secondary text-xs">Личные чаты</Link>
-              <Link href="/cabinet?tab=wallet" className="btn-secondary text-xs">Пополнить кошелёк</Link>
-              {user.role === "chef" && <Link href="/kitchen" className="btn-primary text-xs">Поварской кабинет</Link>}
+          <div className="card col-span-full overflow-hidden">
+            <h3 className="px-5 pt-5 font-bold">Быстрые действия</h3>
+            <div className="mt-2 divide-y divide-stone-100">
+              {(
+                [
+                  ["/map", "Карта поваров"],
+                  ["/streams", "Стримы"],
+                  ["/chats", "Личные чаты"],
+                  ["/cabinet?tab=wallet", "Пополнить кошелёк"],
+                  ...(user.role === "chef" ? ([["/kitchen", "Поварской кабинет"]] as [string, string][]) : []),
+                ] as [string, string][]
+              ).map(([href, label]) => (
+                <Link key={href} href={href} className="flex items-center justify-between px-5 py-3.5 text-sm font-semibold transition-colors hover:bg-stone-50">
+                  {label}
+                  <span className="text-lg text-stone-400">›</span>
+                </Link>
+              ))}
             </div>
           </div>
         </div>

@@ -89,13 +89,6 @@ export default async function Header() {
           )}
         </div>
       </div>
-      <nav className="flex items-center gap-1 overflow-x-auto border-t border-stone-100 px-4 py-1.5 md:hidden">
-        {NAV.map((n) => (
-          <Link key={n.href} href={n.href} className="rounded-lg px-3 py-1.5 text-sm font-medium text-stone-600">
-            {n.label}
-          </Link>
-        ))}
-      </nav>
     </header>
   );
 }

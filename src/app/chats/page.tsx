@@ -57,14 +57,14 @@ export default function ChatsPage() {
           </p>
         </div>
       ) : (
-        <div className="mt-6 space-y-3">
+        <div className="card mt-6 divide-y divide-stone-100 overflow-hidden">
           {chats.map((c) => {
             const iAmChef = me === c.chefUserId;
             const other = iAmChef ? { name: c.customerName, avatar: c.customerAvatar } : { name: c.chefName, avatar: c.chefAvatar };
             const [label, cls] = STATUS_RU[c.status] ?? ["", ""];
             return (
-              <Link key={c.id} href={`/chats/${c.id}`} className="card flex items-center gap-3 p-4 transition hover:ring-stone-400">
-                <span className="font-display flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-lg font-bold text-orange-700">
+              <Link key={c.id} href={`/chats/${c.id}`} className="flex items-center gap-3 px-4 py-4 transition-colors hover:bg-stone-50">
+                <span className="font-display flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-100 text-lg text-stone-900/60">
                   {other.name.trim().charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0 flex-1">
@@ -75,6 +75,7 @@ export default function ChatsPage() {
                   <p className="truncate text-sm text-stone-500">{c.lastMessage ?? "Нет сообщений"}</p>
                 </div>
                 <span className="shrink-0 text-[11px] text-stone-400">{timeAgo(c.lastAt ?? c.createdAt)}</span>
+                <span className="shrink-0 text-lg text-stone-400">›</span>
               </Link>
             );
           })}
