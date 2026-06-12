@@ -38,14 +38,14 @@ export default function DishList({
                 <span className="text-xs text-stone-400">недоступно</span>
               ) : inCart ? (
                 <div className="flex items-center gap-2">
-                  <button onClick={() => cart.setQty(d.id, inCart.qty - 1)} className="btn-secondary !h-8 !w-8 !p-0">−</button>
+                  <button onClick={() => cart.setQty(d.id, inCart.qty - 1)} className="btn-secondary !h-9 !w-9 !p-0">−</button>
                   <span className="w-5 text-center text-sm font-bold">{inCart.qty}</span>
-                  <button onClick={() => cart.setQty(d.id, inCart.qty + 1)} className="btn-primary !h-8 !w-8 !p-0">+</button>
+                  <button onClick={() => cart.setQty(d.id, inCart.qty + 1)} className="btn-primary !h-9 !w-9 !p-0">+</button>
                 </div>
               ) : (
                 <button
                   onClick={() => cart.add(chefId, chefName, { dishId: d.id, name: d.name, price: d.price, emoji: d.emoji }, "site")}
-                  className="btn-primary !py-1.5 text-xs"
+                  className="btn-primary !py-2.5 text-xs"
                 >
                   В корзину
                 </button>

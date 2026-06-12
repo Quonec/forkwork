@@ -4,6 +4,8 @@ import Header from "@/components/Header";
 import Footer from "@/components/Footer";
 import { CartProvider } from "@/components/cart";
 import AIWidget from "@/components/AIWidget";
+import BottomNav from "@/components/BottomNav";
+import CartBar from "@/components/CartBar";
 
 export const metadata: Metadata = {
   title: "ForkWork — гастрономическая платформа",
@@ -17,8 +19,10 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
       <body className="flex min-h-full flex-col">
         <CartProvider>
           <Header />
-          <main className="flex-1">{children}</main>
+          <main className="flex-1 pb-16 md:pb-0">{children}</main>
           <Footer />
+          <CartBar />
+          <BottomNav />
           <AIWidget />
         </CartProvider>
       </body>
