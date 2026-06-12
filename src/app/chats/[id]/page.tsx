@@ -79,7 +79,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
         <div className="flex items-center gap-3">
           <Link href="/chats" className="text-stone-400 hover:text-stone-600">←</Link>
           <div>
-            <p className="font-bold">{iAmChef ? otherName : `👨‍🍳 ${otherName}`}</p>
+            <p className="font-bold">{otherName}</p>
             <p className="text-xs text-stone-400">
               {chat.status === "pending" ? "ожидает согласия повара" : chat.status === "active" ? "чат активен" : chat.status === "declined" ? "запрос отклонён" : "заблокирован"}
             </p>
@@ -121,7 +121,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
           onChange={(e) => setInput(e.target.value)}
           disabled={!canWrite}
         />
-        <button className="btn-primary" disabled={!canWrite}>➤</button>
+        <button className="btn-primary" disabled={!canWrite}>→</button>
       </form>
     </div>
   );

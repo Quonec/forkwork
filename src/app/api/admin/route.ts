@@ -183,7 +183,7 @@ export async function POST(req: Request) {
     case "category_add": {
       const name = String(body.name ?? "").trim().slice(0, 50);
       if (!name) return err("Название обязательно");
-      db.prepare("INSERT INTO cuisines (name, emoji) VALUES (?,?)").run(name, String(body.emoji ?? "🍽️").slice(0, 8));
+      db.prepare("INSERT INTO cuisines (name, emoji) VALUES (?,?)").run(name, String(body.emoji ?? "").slice(0, 8));
       return json({ ok: true });
     }
     case "category_delete":

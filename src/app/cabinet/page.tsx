@@ -59,7 +59,7 @@ function Cabinet() {
       body: JSON.stringify({ action: "topup", amount: topup }),
     });
     const d = await res.json();
-    setNote(res.ok ? `Кошелёк пополнен на ${fmtFC(topup)} ✅` : d.error);
+    setNote(res.ok ? `Кошелёк пополнен на ${fmtFC(topup)}` : d.error);
     loadAll();
     router.refresh();
   };
@@ -82,7 +82,9 @@ function Cabinet() {
   return (
     <div className="mx-auto max-w-5xl px-4 py-8 sm:px-6">
       <div className="flex items-center gap-4">
-        <span className="flex h-16 w-16 items-center justify-center rounded-2xl bg-orange-100 text-3xl">{user.avatar}</span>
+        <span className="font-display flex h-16 w-16 items-center justify-center rounded-xl bg-orange-100 text-2xl font-bold text-orange-800">
+          {user.name.trim().charAt(0).toUpperCase()}
+        </span>
         <div>
           <h1 className="text-2xl font-extrabold">{user.name}</h1>
           <p className="text-sm text-stone-500">{user.email} · {user.role === "chef" ? "повар" : user.role === "admin" ? "администратор" : "заказчик"}</p>
@@ -109,18 +111,18 @@ function Cabinet() {
 
       {tab === "overview" && (
         <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <StatCard label="Заказов всего" value={String(orders.length)} emoji="🧾" />
-          <StatCard label="В избранном" value={String(favorites.length)} emoji="❤️" />
-          <StatCard label="Баланс" value={fmtFC(balance)} emoji="💰" />
-          <StatCard label="Активных заказов" value={String(orders.filter((o) => !["done", "cancelled"].includes(o.status)).length)} emoji="🔥" />
+          <StatCard label="Заказов всего" value={String(orders.length)} />
+          <StatCard label="В избранном" value={String(favorites.length)} />
+          <StatCard label="Баланс" value={fmtFC(balance)} />
+          <StatCard label="Активных заказов" value={String(orders.filter((o) => !["done", "cancelled"].includes(o.status)).length)} />
           <div className="card col-span-full p-6">
             <h3 className="font-bold">Быстрые действия</h3>
             <div className="mt-3 flex flex-wrap gap-2">
-              <Link href="/map" className="btn-secondary text-xs">🗺️ Карта поваров</Link>
-              <Link href="/streams" className="btn-secondary text-xs">📺 Стримы</Link>
-              <Link href="/chats" className="btn-secondary text-xs">💬 Личные чаты</Link>
-              <Link href="/cabinet?tab=wallet" className="btn-secondary text-xs">💰 Пополнить кошелёк</Link>
-              {user.role === "chef" && <Link href="/kitchen" className="btn-primary text-xs">👨‍🍳 Поварской кабинет</Link>}
+              <Link href="/map" className="btn-secondary text-xs">Карта поваров</Link>
+              <Link href="/streams" className="btn-secondary text-xs">Стримы</Link>
+              <Link href="/chats" className="btn-secondary text-xs">Личные чаты</Link>
+              <Link href="/cabinet?tab=wallet" className="btn-secondary text-xs">Пополнить кошелёк</Link>
+              {user.role === "chef" && <Link href="/kitchen" className="btn-primary text-xs">Поварской кабинет</Link>}
             </div>
           </div>
         </div>
@@ -128,10 +130,12 @@ function Cabinet() {
 
       {tab === "orders" && (
         <div className="mt-6 space-y-3">
-          {orders.length === 0 && <p className="text-sm text-stone-500">Заказов пока нет — самое время это исправить 😉</p>}
+          {orders.length === 0 && <p className="text-sm text-stone-500">Заказов пока нет — самое время это исправить.</p>}
           {orders.map((o) => (
             <Link key={o.id} href={`/orders/${o.id}`} className="card flex items-center gap-4 p-4 transition-shadow hover:shadow-md">
-              <span className="text-2xl">{o.items[0]?.emoji ?? "🍽️"}</span>
+              <span className="font-display flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-base font-bold text-orange-700">
+                {(o.items[0]?.name ?? o.chefName).trim().charAt(0).toUpperCase()}
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="font-bold">Заказ #{o.id} · {o.chefName}</p>
                 <p className="truncate text-xs text-stone-500">
@@ -151,7 +155,7 @@ function Cabinet() {
       {tab === "favorites" && (
         <div className="mt-6">
           {favorites.length === 0 ? (
-            <p className="text-sm text-stone-500">Избранных поваров нет. Жмите 🤍 на профиле повара.</p>
+            <p className="text-sm text-stone-500">Избранных поваров нет. Нажмите «В избранное» на профиле повара.</p>
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {favorites.map((c) => <ChefCardView key={c.id} chef={c} />)}
@@ -195,7 +199,7 @@ function Cabinet() {
 
       {tab === "become" && user.role === "customer" && (
         <div className="card mt-6 max-w-xl p-6">
-          <h3 className="text-lg font-bold">👨‍🍳 Стать поваром ForkWork</h3>
+          <h3 className="text-lg font-bold">Стать поваром ForkWork</h3>
           {reqStatus === "pending" ? (
             <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-sm text-amber-700">
               Ваша заявка на рассмотрении у администратора. Мы сообщим о решении!
@@ -221,12 +225,11 @@ function Cabinet() {
   );
 }
 
-function StatCard({ label, value, emoji }: { label: string; value: string; emoji: string }) {
+function StatCard({ label, value }: { label: string; value: string }) {
   return (
     <div className="card p-5">
-      <div className="text-2xl">{emoji}</div>
-      <p className="mt-2 text-xl font-extrabold">{value}</p>
-      <p className="text-xs text-stone-500">{label}</p>
+      <p className="font-display text-2xl font-bold text-stone-900">{value}</p>
+      <p className="mt-1 text-xs uppercase tracking-wide text-stone-500">{label}</p>
     </div>
   );
 }

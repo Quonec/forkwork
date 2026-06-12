@@ -93,7 +93,7 @@ export default function MapClient() {
           <option value={0}>Все кухни</option>
           {cuisines.map((c) => (
             <option key={c.id} value={c.id}>
-              {c.emoji} {c.name}
+              {c.name}
             </option>
           ))}
         </select>
@@ -108,10 +108,10 @@ export default function MapClient() {
           <option value={4}>4★ и выше</option>
           <option value={4.5}>4.5★ и выше</option>
         </select>
-        <Toggle label="🟢 Доступен" active={filters.onlyAvailable} onClick={() => set("onlyAvailable", !filters.onlyAvailable)} />
-        <Toggle label="🔴 Live-эфир" active={filters.onlyLive} onClick={() => set("onlyLive", !filters.onlyLive)} />
-        <Toggle label="🛵 Доставка" active={filters.delivery} onClick={() => set("delivery", !filters.delivery)} />
-        <Toggle label="🚶 Самовывоз" active={filters.pickup} onClick={() => set("pickup", !filters.pickup)} />
+        <Toggle label="Доступен" active={filters.onlyAvailable} onClick={() => set("onlyAvailable", !filters.onlyAvailable)} />
+        <Toggle label="Live-эфир" active={filters.onlyLive} onClick={() => set("onlyLive", !filters.onlyLive)} />
+        <Toggle label="Доставка" active={filters.delivery} onClick={() => set("delivery", !filters.delivery)} />
+        <Toggle label="Самовывоз" active={filters.pickup} onClick={() => set("pickup", !filters.pickup)} />
         <button onClick={() => setFilters(DEFAULT_FILTERS)} className="text-xs font-semibold text-stone-400 hover:text-orange-600">
           Сбросить
         </button>
@@ -126,7 +126,7 @@ export default function MapClient() {
         <div className="flex max-h-[540px] flex-col gap-3 overflow-y-auto pr-1">
           {filtered.length === 0 && !loading && (
             <div className="card p-6 text-center text-sm text-stone-500">
-              Никто не подошёл под фильтры 😕 Попробуйте смягчить условия.
+              Никто не подошёл под фильтры. Попробуйте смягчить условия.
             </div>
           )}
           {filtered.map((c) => (
@@ -136,8 +136,8 @@ export default function MapClient() {
               className={`card cursor-pointer p-4 transition-all ${selected === c.id ? "ring-2 ring-orange-400" : ""}`}
             >
               <div className="flex items-start gap-3">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-2xl">
-                  {c.avatar}
+                <span className="font-display flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-lg font-bold text-orange-700">
+                  {c.name.trim().charAt(0).toUpperCase()}
                 </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center justify-between gap-2">
@@ -147,7 +147,7 @@ export default function MapClient() {
                     <span className="text-xs font-bold text-stone-400">{PRICE_LEVELS[c.priceLevel]}</span>
                   </div>
                   <p className="truncate text-xs text-stone-500">
-                    {c.cuisineEmoji} {c.cuisineName} · {c.specialization}
+                    {c.cuisineName} · {c.specialization}
                   </p>
                   <div className="mt-1.5 flex items-center gap-2">
                     <Stars rating={c.rating} size="text-xs" />
@@ -166,7 +166,7 @@ export default function MapClient() {
                 </Link>
                 {c.liveStreamId && (
                   <Link href={`/streams/${c.liveStreamId}`} className="btn-secondary !py-1.5 text-xs">
-                    📺 В эфир
+                    В эфир
                   </Link>
                 )}
               </div>

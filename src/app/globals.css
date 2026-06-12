@@ -44,22 +44,29 @@
 body {
   @apply bg-stone-50 text-stone-900 antialiased;
   font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  letter-spacing: 0.01em;
   background-image:
     radial-gradient(900px 480px at 85% -8%, rgb(201 143 29 / 0.08), transparent 60%),
     radial-gradient(700px 420px at -10% 30%, rgb(216 167 61 / 0.06), transparent 55%);
   background-attachment: fixed;
 }
 
+/* Акцидентная гарнитура для монограмм и крупных заголовков */
+.font-display {
+  font-family: Georgia, "Times New Roman", serif;
+  letter-spacing: -0.01em;
+}
+
 @layer components {
   .card {
-    @apply bg-white rounded-2xl ring-1 ring-stone-200/70 shadow-sm;
+    @apply bg-white rounded-xl ring-1 ring-stone-200/70 shadow-sm;
   }
   .btn,
   .btn-primary,
   .btn-secondary,
   .btn-ghost,
   .btn-danger {
-    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-primary {
     @apply bg-orange-500 text-white hover:bg-orange-600;
@@ -74,7 +81,7 @@ body {
     @apply bg-red-50 text-red-600 hover:bg-red-100;
   }
   .input {
-    @apply w-full rounded-xl border border-stone-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-stone-400;
+    @apply w-full rounded-lg border border-stone-300 bg-white px-3.5 py-2.5 text-sm outline-none focus:border-orange-400 focus:ring-2 focus:ring-orange-100 placeholder:text-stone-400;
   }
   .chip {
     @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;

@@ -51,8 +51,8 @@ export default function ChatsPage() {
 
       {chats.length === 0 ? (
         <div className="card mt-6 p-10 text-center">
-          <div className="text-5xl">💬</div>
-          <p className="mt-3 text-sm text-stone-500">
+          <div className="mx-auto h-px w-12 bg-stone-300" />
+          <p className="mt-4 text-sm text-stone-500">
             Чатов пока нет. Найдите повара на <Link href="/map" className="font-semibold text-orange-600">карте</Link> и отправьте запрос на личный чат.
           </p>
         </div>
@@ -64,10 +64,12 @@ export default function ChatsPage() {
             const [label, cls] = STATUS_RU[c.status] ?? ["", ""];
             return (
               <Link key={c.id} href={`/chats/${c.id}`} className="card flex items-center gap-3 p-4 transition-shadow hover:shadow-md">
-                <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-2xl">{other.avatar}</span>
+                <span className="font-display flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-lg font-bold text-orange-700">
+                  {other.name.trim().charAt(0).toUpperCase()}
+                </span>
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <p className="truncate font-bold">{iAmChef ? "" : "👨‍🍳 "}{other.name}</p>
+                    <p className="truncate font-bold">{other.name}</p>
                     <span className={`chip px-2 py-0.5 text-[10px] ${cls}`}>{label}</span>
                   </div>
                   <p className="truncate text-sm text-stone-500">{c.lastMessage ?? "Нет сообщений"}</p>

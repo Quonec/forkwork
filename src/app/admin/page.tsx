@@ -6,12 +6,12 @@ import Link from "next/link";
 import { fmtFC, fmtDateTime } from "@/lib/format";
 
 const TABS = [
-  ["stats", "📊 Аналитика"],
-  ["users", "👥 Пользователи"],
-  ["complaints", "🚩 Жалобы"],
-  ["reviews", "⭐ Отзывы"],
-  ["requests", "📨 Заявки"],
-  ["categories", "🏷️ Категории"],
+  ["stats", "Аналитика"],
+  ["users", "Пользователи"],
+  ["complaints", "Жалобы"],
+  ["reviews", "Отзывы"],
+  ["requests", "Заявки"],
+  ["categories", "Категории"],
 ] as const;
 
 type Totals = {
@@ -41,7 +41,7 @@ function Admin() {
     load();
   }, [load]);
 
-  const act = async (body: Record<string, unknown>, okNote = "Готово ✅") => {
+  const act = async (body: Record<string, unknown>, okNote = "Готово") => {
     const res = await fetch("/api/admin", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -56,7 +56,7 @@ function Admin() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      <h1 className="text-2xl font-extrabold">🛡️ Админ-панель</h1>
+      <h1 className="text-2xl font-extrabold">Админ-панель</h1>
       <p className="mt-1 text-sm text-stone-500">Модерация, пользователи, финансы и аналитика платформы.</p>
 
       <div className="mt-6 flex gap-1 overflow-x-auto border-b border-stone-200">
@@ -80,7 +80,9 @@ function Admin() {
         <div className="card mt-6 divide-y divide-stone-100">
           {(data.users as { id: number; email: string; name: string; role: string; avatar: string; blocked: number; ordersCount: number; createdAt: string }[]).map((u) => (
             <div key={u.id} className="flex items-center gap-3 px-4 py-3">
-              <span className="text-xl">{u.avatar}</span>
+              <span className="font-display flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-stone-100 text-sm font-bold text-stone-600">
+                {u.name.trim().charAt(0).toUpperCase()}
+              </span>
               <div className="min-w-0 flex-1">
                 <p className="font-semibold">
                   {u.name}
@@ -105,8 +107,7 @@ function Admin() {
       {data && tab === "complaints" && (
         <div className="mt-6 space-y-3">
           {(data.complaints as { id: number; targetType: string; targetId: number; reason: string; status: string; createdAt: string; authorName: string }[]).map((c) => (
-            <div key={c.id} className="card flex items-center gap-3 p-4">
-              <span className="text-xl">🚩</span>
+            <div key={c.id} className="card flex items-center gap-3 border-l-4 border-l-red-400 p-4">
               <div className="min-w-0 flex-1">
                 <p className="text-sm font-semibold">{c.reason}</p>
                 <p className="text-xs text-stone-400">
@@ -132,7 +133,7 @@ function Admin() {
           {(data.reviews as { id: number; rating: number; text: string; status: string; createdAt: string; authorName: string; chefName: string }[]).map((r) => (
             <div key={r.id} className={`card p-4 ${r.status === "hidden" ? "opacity-60" : ""}`}>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-semibold">{r.authorName} → 👨‍🍳 {r.chefName}</p>
+                <p className="text-sm font-semibold">{r.authorName} → {r.chefName}</p>
                 <span className="text-sm text-amber-500">{"★".repeat(r.rating)}</span>
               </div>
               <p className="mt-2 text-sm text-stone-700">{r.text}</p>
@@ -163,7 +164,7 @@ function Admin() {
               <p className="mt-2 text-sm text-stone-700">{r.message}</p>
               {r.status === "pending" && (
                 <div className="mt-3 flex gap-2">
-                  <button onClick={() => act({ action: "request_approve", id: r.id }, "Заявка одобрена — пользователь стал поваром 👨‍🍳")} className="btn-primary !py-1.5 text-xs">Одобрить</button>
+                  <button onClick={() => act({ action: "request_approve", id: r.id }, "Заявка одобрена — пользователь стал поваром")} className="btn-primary !py-1.5 text-xs">Одобрить</button>
                   <button onClick={() => act({ action: "request_reject", id: r.id }, "Заявка отклонена")} className="btn-secondary !py-1.5 text-xs">Отклонить</button>
                 </div>
               )}
@@ -183,14 +184,14 @@ function StatsView({ data }: { data: { totals: Totals; revenueByChef: { name: st
   return (
     <div className="mt-6">
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Big label="Пользователи" value={String(t.totalUsers)} sub={`из них поваров: ${t.totalChefs}`} emoji="👥" />
-        <Big label="GMV (оборот)" value={fmtFC(t.gmv)} sub={`комиссия платформы: ${fmtFC(t.fees)}`} emoji="💰" />
-        <Big label="Заказы" value={String(t.totalOrders)} sub={`средний чек: ${fmtFC(t.avgCheck)}`} emoji="🧾" />
-        <Big label="Конверсия стрим → заказ" value={`${t.conversion}%`} sub={`${t.ordersFromStream} заказов из эфиров`} emoji="📈" />
-        <Big label="Стримы" value={`${t.liveStreams} live`} sub={`всего эфиров: ${t.totalStreams} · 👁 ${t.streamViews}`} emoji="📺" />
-        <Big label="Чаты" value={String(t.chatsCount)} sub={`сообщений всего: ${t.messagesCount}`} emoji="💬" />
-        <Big label="Открытые жалобы" value={String(t.openComplaints)} sub="ждут модерации" emoji="🚩" />
-        <Big label="Заявки в повара" value={String(t.pendingRequests)} sub="на рассмотрении" emoji="📨" />
+        <Big label="Пользователи" value={String(t.totalUsers)} sub={`из них поваров: ${t.totalChefs}`} />
+        <Big label="GMV (оборот)" value={fmtFC(t.gmv)} sub={`комиссия платформы: ${fmtFC(t.fees)}`} />
+        <Big label="Заказы" value={String(t.totalOrders)} sub={`средний чек: ${fmtFC(t.avgCheck)}`} />
+        <Big label="Конверсия стрим → заказ" value={`${t.conversion}%`} sub={`${t.ordersFromStream} заказов из эфиров`} />
+        <Big label="Стримы" value={`${t.liveStreams} live`} sub={`всего эфиров: ${t.totalStreams} · просмотров: ${t.streamViews}`} />
+        <Big label="Чаты" value={String(t.chatsCount)} sub={`сообщений всего: ${t.messagesCount}`} />
+        <Big label="Открытые жалобы" value={String(t.openComplaints)} sub="ждут модерации" />
+        <Big label="Заявки в повара" value={String(t.pendingRequests)} sub="на рассмотрении" />
       </div>
 
       <div className="mt-6 grid gap-4 lg:grid-cols-2">
@@ -249,14 +250,11 @@ function StatsView({ data }: { data: { totals: Totals; revenueByChef: { name: st
   );
 }
 
-function Big({ label, value, sub, emoji }: { label: string; value: string; sub: string; emoji: string }) {
+function Big({ label, value, sub }: { label: string; value: string; sub: string }) {
   return (
     <div className="card p-5">
-      <div className="flex items-center justify-between">
-        <p className="text-xs font-bold uppercase tracking-wide text-stone-400">{label}</p>
-        <span className="text-xl">{emoji}</span>
-      </div>
-      <p className="mt-2 text-2xl font-extrabold">{value}</p>
+      <p className="text-xs font-bold uppercase tracking-wide text-stone-400">{label}</p>
+      <p className="font-display mt-2 text-2xl font-bold">{value}</p>
       <p className="mt-0.5 text-xs text-stone-500">{sub}</p>
     </div>
   );
@@ -264,21 +262,19 @@ function Big({ label, value, sub, emoji }: { label: string; value: string; sub: 
 
 function CategoriesView({ categories, act }: { categories: { id: number; name: string; emoji: string; chefs: number }[]; act: (b: Record<string, unknown>, n?: string) => void }) {
   const [name, setName] = useState("");
-  const [emoji, setEmoji] = useState("🍽️");
   return (
     <div className="mt-6 grid gap-4 md:grid-cols-[300px_1fr]">
       <div className="card h-fit space-y-3 p-5">
         <h3 className="font-bold">Новая категория</h3>
-        <div className="flex gap-2">
-          <input className="input !w-16 text-center" value={emoji} onChange={(e) => setEmoji(e.target.value)} />
-          <input className="input flex-1" placeholder="Название кухни" value={name} onChange={(e) => setName(e.target.value)} />
-        </div>
-        <button onClick={() => { act({ action: "category_add", name, emoji }, "Категория добавлена"); setName(""); }} className="btn-primary w-full">Добавить</button>
+        <input className="input" placeholder="Название кухни" value={name} onChange={(e) => setName(e.target.value)} />
+        <button onClick={() => { act({ action: "category_add", name }, "Категория добавлена"); setName(""); }} className="btn-primary w-full">Добавить</button>
       </div>
       <div className="card divide-y divide-stone-100">
         {categories.map((c) => (
           <div key={c.id} className="flex items-center gap-3 px-4 py-3">
-            <span className="text-xl">{c.emoji}</span>
+            <span className="font-display flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-sm font-bold text-orange-700">
+              {c.name.trim().charAt(0).toUpperCase()}
+            </span>
             <p className="flex-1 font-semibold">{c.name}</p>
             <span className="text-xs text-stone-400">поваров: {c.chefs}</span>
             <button onClick={() => confirm(`Удалить категорию «${c.name}»?`) && act({ action: "category_delete", id: c.id }, "Категория удалена")} className="btn-danger !py-1 text-xs">✕</button>

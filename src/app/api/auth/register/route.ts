@@ -19,7 +19,7 @@ export async function POST(req: Request) {
   const exists = db.prepare("SELECT id FROM users WHERE email = ?").get(email);
   if (exists) return err("Пользователь с таким email уже зарегистрирован");
 
-  const avatar = role === "chef" ? "👨‍🍳" : "🙂";
+  const avatar = "";
   const userId = Number(
     db
       .prepare(
@@ -29,7 +29,7 @@ export async function POST(req: Request) {
   );
   db.prepare("INSERT INTO wallets (user_id, balance) VALUES (?, 500)").run(userId);
   db.prepare("INSERT INTO transactions (user_id, type, amount, comment, ref, created_at) VALUES (?,?,?,?,?,?)").run(
-    userId, "topup", 500, "Приветственный бонус ForkWork 🎁", "", nowIso()
+    userId, "topup", 500, "Приветственный бонус ForkWork", "", nowIso()
   );
 
   if (role === "chef") {

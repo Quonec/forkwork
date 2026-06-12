@@ -42,7 +42,7 @@ export async function POST(req: Request) {
       .prepare("SELECT c.user_id AS uid, u.name FROM chefs c JOIN users u ON u.id = c.user_id WHERE c.id = ?")
       .get(chefId) as { uid: number; name: string } | undefined;
     if (!chef) return err("Повар не найден", 404);
-    if (chef.uid === user.id) return err("Себе чаевые не оставить 🙂");
+    if (chef.uid === user.id) return err("Себе чаевые не оставить");
     const wallet = db.prepare("SELECT balance FROM wallets WHERE user_id = ?").get(user.id) as { balance: number } | undefined;
     if (!wallet || wallet.balance < amount) return err("Недостаточно средств в кошельке");
 
@@ -54,7 +54,7 @@ export async function POST(req: Request) {
         user.id, "tip_out", -amount, `Чаевые повару ${chef.name}`, "", t
       );
       db.prepare("INSERT INTO transactions (user_id, type, amount, comment, ref, created_at) VALUES (?,?,?,?,?,?)").run(
-        chef.uid, "tip_in", amount, `Чаевые от ${user.name} 💛`, "", t
+        chef.uid, "tip_in", amount, `Чаевые от ${user.name}`, "", t
       );
       db.exec("COMMIT");
     } catch (e) {

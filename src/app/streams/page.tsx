@@ -20,7 +20,7 @@ export default function StreamsPage() {
       </p>
 
       <section className="mt-8">
-        <SectionTitle title={`🔴 Сейчас в эфире · ${live.length}`} />
+        <SectionTitle title={`Сейчас в эфире · ${live.length}`} />
         {live.length === 0 ? (
           <p className="text-sm text-stone-500">Прямо сейчас эфиров нет — загляните в расписание ниже.</p>
         ) : (
@@ -34,7 +34,7 @@ export default function StreamsPage() {
 
       {scheduled.length > 0 && (
         <section className="mt-10">
-          <SectionTitle title="📅 Скоро в эфире" />
+          <SectionTitle title="Скоро в эфире" />
           <div className="grid gap-4 md:grid-cols-3">
             {scheduled.map((s) => (
               <StreamCardView key={s.id} stream={s} />
@@ -45,7 +45,7 @@ export default function StreamsPage() {
 
       {ended.length > 0 && (
         <section className="mt-10">
-          <SectionTitle title="🎬 Прошедшие эфиры" />
+          <SectionTitle title="Прошедшие эфиры" />
           <div className="grid gap-4 md:grid-cols-3">
             {ended.map((s) => (
               <StreamCardView key={s.id} stream={s} />

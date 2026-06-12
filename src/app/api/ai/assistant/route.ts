@@ -46,7 +46,7 @@ function buildRecommendations(query: string): Rec[] {
   ).all() as unknown as { id: number; title: string; tags: string; status: string; chefName: string }[];
   for (const st of streams) {
     const s = score(query, `${st.title} ${st.tags}`) + (st.status === "live" ? 1 : 0);
-    if (s > 1) recs.push({ type: "stream", id: st.id, title: st.title, subtitle: st.status === "live" ? `🔴 В эфире · ${st.chefName}` : `Скоро · ${st.chefName}`, emoji: "📺", href: `/streams/${st.id}`, score: s });
+    if (s > 1) recs.push({ type: "stream", id: st.id, title: st.title, subtitle: st.status === "live" ? `В эфире · ${st.chefName}` : `Скоро · ${st.chefName}`, emoji: "", href: `/streams/${st.id}`, score: s });
   }
   const recipes = db.prepare(`SELECT id, title, tags, emoji, time_min AS timeMin FROM recipes`).all() as unknown as { id: number; title: string; tags: string; emoji: string; timeMin: number }[];
   for (const r of recipes) {
@@ -69,19 +69,19 @@ function fallbackPopular(): Rec[] {
      WHERE u.blocked=0 ORDER BY rating DESC LIMIT 3`
   ).all() as unknown as { id: number; name: string; avatar: string; cuisine: string | null; rating: number }[];
   return [
-    ...live.map((s, i): Rec => ({ type: "stream", id: s.id, title: s.title, subtitle: `🔴 В эфире · ${s.chefName}`, emoji: "📺", href: `/streams/${s.id}`, score: 10 - i })),
+    ...live.map((s, i): Rec => ({ type: "stream", id: s.id, title: s.title, subtitle: `В эфире · ${s.chefName}`, emoji: "", href: `/streams/${s.id}`, score: 10 - i })),
     ...top.map((c, i): Rec => ({ type: "chef", id: c.id, title: c.name, subtitle: `${c.cuisine ?? "Кухня"} · рейтинг ${c.rating}`, emoji: c.avatar, href: `/chefs/${c.id}`, score: 5 - i })),
   ];
 }
 
 function heuristicReply(query: string, recs: Rec[]): string {
   if (recs.length === 0)
-    return "По вашему запросу я ничего точного не нашёл 🤔 Попробуйте сформулировать иначе — например, «острый суп», «веганский завтрак» или «итальянская паста». А пока посмотрите live-стримы: там всегда что-то готовится!";
+    return "По вашему запросу я ничего точного не нашёл. Попробуйте сформулировать иначе — например, «острый суп», «веганский завтрак» или «итальянская паста». А пока посмотрите live-стримы: там всегда что-то готовится!";
   const names = recs.slice(0, 3).map((r) => `«${r.title}»`).join(", ");
   const liveCount = recs.filter((r) => r.type === "stream").length;
   let reply = `Вот что я подобрал по запросу «${query}»: ${names}.`;
   if (liveCount > 0) reply += " Обратите внимание — есть подходящий live-эфир, из него можно заказать блюдо в один клик.";
-  reply += " Карточки ниже кликабельны 👇";
+  reply += " Карточки ниже кликабельны.";
   return reply;
 }
 

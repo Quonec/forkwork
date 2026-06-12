@@ -17,7 +17,7 @@ type Analysis = {
   suggestions: { id: number; name: string; price: number; emoji: string }[];
 };
 
-const REACTIONS = ["🔥", "😋", "👏", "❤️"];
+const REACTIONS = ["Огонь!", "Вкусно", "Браво", "Класс"];
 
 export default function StreamRoom({
   stream,
@@ -102,12 +102,14 @@ export default function StreamRoom({
           {/* «Видео» */}
           <div className="relative aspect-video overflow-hidden rounded-2xl bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950 ring-1 ring-stone-800">
             <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
-              <div className="steam mb-2 text-3xl opacity-70">
-                <span>♨️</span>
-                <span>♨️</span>
-                <span>♨️</span>
+              <div className="steam mb-2 text-2xl font-bold text-orange-300/70">
+                <span>~</span>
+                <span>~</span>
+                <span>~</span>
               </div>
-              <div className="text-7xl">🍳</div>
+              <div className="font-display text-7xl font-bold text-orange-300/60">
+                {(stream.title.trim().charAt(0) || "F").toUpperCase()}
+              </div>
               <p className="mt-4 max-w-md px-6 text-center text-lg font-bold">{stream.title}</p>
               {!isLive && (
                 <p className="mt-2 text-sm text-stone-400">
@@ -119,12 +121,12 @@ export default function StreamRoom({
             </div>
             <div className="absolute left-4 top-4 flex items-center gap-2">
               {isLive ? <LiveBadge /> : <span className="chip bg-stone-700 text-white">{status === "scheduled" ? "Скоро" : "Завершён"}</span>}
-              {isLive && <span className="chip bg-black/50 text-white">👁 {viewers}</span>}
+              {isLive && <span className="chip bg-black/50 text-white">{viewers} зрит.</span>}
             </div>
             {/* Плавающие реакции */}
             <div className="pointer-events-none absolute bottom-4 right-6">
               {floats.map((f) => (
-                <span key={f.id} className="absolute bottom-0 right-0 animate-[steam_2.5s_ease-out] text-3xl">
+                <span key={f.id} className="chip absolute bottom-0 right-0 animate-[steam_2.5s_ease-out] bg-orange-500/90 text-white">
                   {f.emoji}
                 </span>
               ))}
@@ -133,9 +135,9 @@ export default function StreamRoom({
 
           {/* Закреплённое сообщение */}
           {stream.pinnedMessage && (
-            <div className="card flex items-start gap-2 border-l-4 border-l-orange-500 p-4">
-              <span>📌</span>
-              <p className="text-sm font-semibold text-stone-700">{stream.pinnedMessage}</p>
+            <div className="card border-l-4 border-l-orange-500 p-4">
+              <p className="text-[10px] font-bold uppercase tracking-widest text-orange-500">Закреплено</p>
+              <p className="mt-1 text-sm font-semibold text-stone-700">{stream.pinnedMessage}</p>
             </div>
           )}
 
@@ -143,13 +145,15 @@ export default function StreamRoom({
           {chef && (
             <div className="card flex items-center justify-between gap-3 p-4">
               <div className="flex min-w-0 items-center gap-3">
-                <span className="flex h-12 w-12 items-center justify-center rounded-xl bg-orange-50 text-2xl">{chef.avatar}</span>
+                <span className="font-display flex h-12 w-12 items-center justify-center rounded-lg bg-orange-50 text-lg font-bold text-orange-700">
+                  {chef.name.trim().charAt(0).toUpperCase()}
+                </span>
                 <div className="min-w-0">
                   <Link href={`/chefs/${chef.id}`} className="font-bold hover:text-orange-600">
                     {chef.name}
                   </Link>
                   <p className="truncate text-xs text-stone-500">
-                    {chef.cuisineEmoji} {chef.cuisineName} · {chef.specialization}
+                    {chef.cuisineName} · {chef.specialization}
                   </p>
                   <Stars rating={chef.rating} size="text-xs" />
                 </div>
@@ -164,14 +168,16 @@ export default function StreamRoom({
           {analysis && (
             <div className="card border border-violet-200 bg-gradient-to-r from-violet-50 to-fuchsia-50 p-4">
               <div className="flex items-center gap-2">
-                <span className="text-lg">🤖</span>
+                <span className="font-display flex h-6 w-6 items-center justify-center rounded-md bg-violet-600 text-[10px] font-bold text-white">AI</span>
                 <p className="text-xs font-bold uppercase tracking-wide text-violet-600">AI-агент анализирует эфир</p>
               </div>
               <p className="mt-2 text-sm text-stone-700">{analysis.summary}</p>
               {analysis.detected && (
                 <div className="mt-3 flex items-center justify-between rounded-xl bg-white p-3 ring-1 ring-violet-100">
                   <div className="flex items-center gap-2">
-                    <span className="text-2xl">{analysis.detected.emoji}</span>
+                    <span className="font-display flex h-9 w-9 items-center justify-center rounded-lg bg-violet-50 text-sm font-bold text-violet-700">
+                      {analysis.detected.name.trim().charAt(0).toUpperCase()}
+                    </span>
                     <div>
                       <p className="text-sm font-bold">{analysis.detected.name}</p>
                       <p className="text-[11px] text-violet-500">распознано · уверенность {analysis.detected.confidence}%</p>
@@ -201,13 +207,15 @@ export default function StreamRoom({
               <div className="grid gap-3 sm:grid-cols-2">
                 {dishes.map((d) => (
                   <div key={d.id} className="card flex items-center gap-3 p-3.5">
-                    <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-orange-50 text-2xl">{d.emoji}</span>
+                    <span className="font-display flex h-12 w-12 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-lg font-bold text-orange-700">
+                      {d.name.trim().charAt(0).toUpperCase()}
+                    </span>
                     <div className="min-w-0 flex-1">
                       <p className="truncate text-sm font-bold">{d.name}</p>
                       <p className="text-sm font-extrabold text-orange-600">{fmtFC(d.price)}</p>
                     </div>
                     <button onClick={() => orderDish(d)} className="btn-primary shrink-0 !py-1.5 text-xs">
-                      🛒 Из эфира
+                      Из эфира
                     </button>
                   </div>
                 ))}
@@ -234,7 +242,7 @@ export default function StreamRoom({
                 ) : (
                   <p className="text-sm leading-snug">
                     <span className={`font-semibold ${m.authorName === stream.chefName ? "text-orange-600" : "text-stone-500"}`}>
-                      {m.authorName === stream.chefName ? `👨‍🍳 ${m.authorName}` : m.authorName}:
+                      {m.authorName}:
                     </span>{" "}
                     {m.text}
                   </p>
@@ -247,7 +255,7 @@ export default function StreamRoom({
           {isLive && (
             <div className="flex gap-1.5 border-t border-stone-100 px-3 pt-2">
               {REACTIONS.map((r) => (
-                <button key={r} onClick={() => send(r, "reaction")} className="flex-1 rounded-xl bg-stone-50 py-1.5 text-lg hover:bg-orange-50" title="Быстрая реакция">
+                <button key={r} onClick={() => send(r, "reaction")} className="flex-1 rounded-lg bg-stone-50 py-1.5 text-xs font-semibold text-stone-600 hover:bg-orange-50 hover:text-orange-700" title="Быстрая реакция">
                   {r}
                 </button>
               ))}
@@ -269,7 +277,7 @@ export default function StreamRoom({
               disabled={!isLive}
             />
             <button type="submit" className="btn-primary !px-3.5" disabled={!isLive || (!input.trim() && !!user)}>
-              ➤
+              →
             </button>
           </form>
           {user && chef && user.id !== chef.userId && (
@@ -300,10 +308,10 @@ function ChatRequestButton({ chefId }: { chefId: number }) {
   };
 
   return state === "done" ? (
-    <p className="text-center text-xs text-emerald-600">Запрос отправлен — повар получит его в кабинете ✅</p>
+    <p className="text-center text-xs text-emerald-600">Запрос отправлен — повар получит его в кабинете</p>
   ) : (
     <button onClick={request} disabled={state === "busy"} className="btn-secondary w-full !py-2 text-xs">
-      💬 Запросить личный чат с поваром
+      Запросить личный чат с поваром
     </button>
   );
 }

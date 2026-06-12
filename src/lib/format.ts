@@ -24,11 +24,11 @@ export const DIFFICULTY_RU = ["", "Легко", "Средне", "Сложно"];
 
 const GRADIENTS = [
   "from-orange-100 to-amber-50",
-  "from-rose-100 to-orange-50",
-  "from-lime-100 to-emerald-50",
-  "from-sky-100 to-cyan-50",
-  "from-violet-100 to-fuchsia-50",
-  "from-yellow-100 to-orange-50",
+  "from-amber-200 to-orange-50",
+  "from-stone-200 to-amber-50",
+  "from-orange-200 to-stone-50",
+  "from-amber-100 to-stone-100",
+  "from-stone-100 to-orange-100",
 ];
 
 export const gradientFor = (id: number) => GRADIENTS[id % GRADIENTS.length];

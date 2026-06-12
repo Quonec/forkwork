@@ -63,7 +63,7 @@ export default function ChefActions({
     });
     const data = await res.json();
     if (res.ok) {
-      setNote(`Чаевые ${tip} FC отправлены! Повар скажет спасибо 💛`);
+      setNote(`Чаевые ${tip} FC отправлены. Повар скажет спасибо!`);
       setTipOpen(false);
       router.refresh();
     } else setNote(data.error ?? "Ошибка");
@@ -73,17 +73,17 @@ export default function ChefActions({
     <div className="flex w-full flex-col gap-2 md:w-56">
       {liveStreamId && (
         <Link href={`/streams/${liveStreamId}`} className="btn bg-red-600 text-white hover:bg-red-700">
-          📺 Смотреть эфир
+          Смотреть эфир
         </Link>
       )}
       <button onClick={toggleFavorite} className={favorite ? "btn bg-rose-50 text-rose-600 ring-1 ring-rose-200" : "btn-secondary"}>
-        {favorite ? "❤️ В избранном" : "🤍 В избранное"}
+        {favorite ? "В избранном" : "В избранное"}
       </button>
       <button onClick={requestChat} className="btn-secondary">
-        💬 Личный чат
+        Личный чат
       </button>
       <button onClick={() => setTipOpen(!tipOpen)} className="btn-secondary">
-        💛 Чаевые
+        Чаевые
       </button>
       {tipOpen && (
         <div className="card space-y-2 p-3">
