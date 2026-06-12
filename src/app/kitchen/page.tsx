@@ -86,7 +86,7 @@ function Kitchen() {
           <Link
             key={key}
             href={`/kitchen?tab=${key}`}
-            className={`whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm font-semibold ${tab === key ? "border-orange-500 text-orange-600" : "border-transparent text-stone-500 hover:text-stone-800"}`}
+            className={`whitespace-nowrap border-b-2 px-3.5 py-2.5 text-sm font-semibold ${tab === key ? "border-yellow-400 text-stone-950" : "border-transparent text-stone-500 hover:text-stone-800"}`}
           >
             {label}
             {key === "orders" && data.orders.filter((o) => o.status === "new").length > 0 && (

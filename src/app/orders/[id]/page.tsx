@@ -61,7 +61,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
 
   return (
     <div className="mx-auto max-w-2xl px-4 py-8 sm:px-6">
-      <p className="text-xs font-bold uppercase tracking-widest text-orange-500">Заказ #{order.id}</p>
+      <p className="text-xs font-bold uppercase tracking-widest text-stone-400">Заказ #{order.id}</p>
       <h1 className="mt-1 text-2xl font-extrabold">
         {order.status === "cancelled" ? "Заказ отменён" : ORDER_STATUS_RU[order.status]}
       </h1>
@@ -69,29 +69,33 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
         Повар: <Link href={`/chefs/${order.chefId}`} className="font-semibold text-orange-600">{order.chefName}</Link> · {fmtDateTime(order.createdAt)}
       </p>
 
-      {/* Таймлайн */}
+      {/* Маршрут заказа: как поездка — от точки А до двери */}
       {order.status !== "cancelled" && (
         <div className="card mt-5 p-5">
-          <div className="flex items-center justify-between">
-            {ORDER_FLOW.map((s, i) => (
-              <div key={s} className="flex flex-1 items-center">
-                <div className="flex flex-col items-center">
-                  <span
-                    className={`font-display flex h-10 w-10 items-center justify-center rounded-full text-base font-bold ${
-                      i <= stepIdx ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-400"
-                    }`}
-                  >
-                    {STEP_NUM[s]}
-                  </span>
-                  <span className={`mt-1.5 text-[10px] font-semibold ${i <= stepIdx ? "text-orange-600" : "text-stone-400"}`}>
-                    {ORDER_STATUS_RU[s]}
-                  </span>
+          <p className="text-[10px] font-bold uppercase tracking-widest text-stone-400">Маршрут заказа</p>
+          <div className="mt-3 flex items-center justify-between">
+            {ORDER_FLOW.map((s, i) => {
+              const finish = i === ORDER_FLOW.length - 1;
+              return (
+                <div key={s} className="flex flex-1 items-center">
+                  <div className="flex flex-col items-center">
+                    <span
+                      className={`font-display flex h-10 w-10 items-center justify-center text-base ${
+                        finish ? "rounded-xl" : "rounded-full"
+                      } ${i <= stepIdx ? "bg-stone-950 text-white" : "bg-stone-100 text-stone-400"}`}
+                    >
+                      {STEP_NUM[s]}
+                    </span>
+                    <span className={`mt-1.5 text-[10px] font-semibold ${i <= stepIdx ? "text-stone-950" : "text-stone-400"}`}>
+                      {ORDER_STATUS_RU[s]}
+                    </span>
+                  </div>
+                  {i < ORDER_FLOW.length - 1 && (
+                    <div className={`mx-1 h-1 flex-1 rounded ${i < stepIdx ? "bg-yellow-400" : "bg-stone-100"}`} />
+                  )}
                 </div>
-                {i < ORDER_FLOW.length - 1 && (
-                  <div className={`mx-1 h-1 flex-1 rounded ${i < stepIdx ? "bg-orange-400" : "bg-stone-100"}`} />
-                )}
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
