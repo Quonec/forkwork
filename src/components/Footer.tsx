@@ -6,7 +6,7 @@ export default function Footer() {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-display flex h-8 w-8 items-center justify-center rounded-lg bg-stone-950 text-sm text-white">
+            <span className="font-display flex h-8 w-8 items-center justify-center rounded-xl bg-yellow-400 text-sm text-stone-950">
               FW
             </span>
             <span className="font-display">

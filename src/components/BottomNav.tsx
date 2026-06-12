@@ -75,6 +75,7 @@ export default function BottomNav() {
                 active ? "text-stone-950" : "text-stone-500"
               }`}
             >
+              {active && <span className="absolute top-0 h-0.5 w-8 rounded-full bg-yellow-400" />}
               {it.icon(active)}
               {it.href === "/cart" && count > 0 && (
                 <span className="absolute right-1/2 top-1 -mr-5 flex h-4 min-w-4 items-center justify-center rounded-full bg-stone-950 px-1 text-[9px] font-bold text-white">

@@ -22,7 +22,7 @@ export default async function Header() {
     <header className="sticky top-0 z-[1100] border-b border-stone-200/80 bg-white/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="font-display flex h-9 w-9 items-center justify-center rounded-lg bg-stone-950 text-base text-white">
+          <span className="font-display flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400 text-base text-stone-950">
             FW
           </span>
           <span className="font-display text-lg tracking-tight">
