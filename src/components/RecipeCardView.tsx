@@ -5,7 +5,7 @@ import { DIFFICULTY_RU } from "@/lib/format";
 
 export function RecipeCardView({ recipe }: { recipe: Recipe }) {
   return (
-    <Link href={`/recipes/${recipe.id}`} className="card group block overflow-hidden transition-shadow hover:shadow-md">
+    <Link href={`/recipes/${recipe.id}`} className="card group block overflow-hidden transition hover:ring-stone-400">
       <Monogram label={recipe.title} id={recipe.id + 2} className="h-24 w-full" textSize="text-4xl" />
       <div className="p-4">
         <h3 className="font-bold leading-snug group-hover:text-orange-600">{recipe.title}</h3>

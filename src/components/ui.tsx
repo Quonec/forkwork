@@ -35,8 +35,8 @@ export function Monogram({
 }) {
   const letter = (label.trim().charAt(0) || "F").toUpperCase();
   return (
-    <div className={`flex items-center justify-center bg-gradient-to-br ${gradientFor(id)} ${className}`}>
-      <span className={`font-display ${textSize} select-none leading-none text-orange-900/35`}>{letter}</span>
+    <div className={`flex items-center justify-center ${gradientFor(id)} ${className}`}>
+      <span className={`font-display ${textSize} select-none leading-none text-stone-950/30`}>{letter}</span>
     </div>
   );
 }

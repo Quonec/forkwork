@@ -63,7 +63,7 @@ export default function ChatsPage() {
             const other = iAmChef ? { name: c.customerName, avatar: c.customerAvatar } : { name: c.chefName, avatar: c.chefAvatar };
             const [label, cls] = STATUS_RU[c.status] ?? ["", ""];
             return (
-              <Link key={c.id} href={`/chats/${c.id}`} className="card flex items-center gap-3 p-4 transition-shadow hover:shadow-md">
+              <Link key={c.id} href={`/chats/${c.id}`} className="card flex items-center gap-3 p-4 transition hover:ring-stone-400">
                 <span className="font-display flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-orange-50 text-lg font-bold text-orange-700">
                   {other.name.trim().charAt(0).toUpperCase()}
                 </span>

@@ -25,7 +25,7 @@ export default function DishList({
         const inCart = cart.chefId === chefId ? cart.items.find((i) => i.dishId === d.id) : undefined;
         return (
           <div key={d.id} className="card flex items-center gap-4 p-4">
-            <span className="font-display flex h-16 w-16 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-orange-50 to-amber-50 text-2xl font-bold text-orange-700">
+            <span className="font-display flex h-16 w-16 shrink-0 items-center justify-center rounded-lg bg-orange-100 text-2xl text-stone-950/40">
               {d.name.trim().charAt(0).toUpperCase()}
             </span>
             <div className="min-w-0 flex-1">

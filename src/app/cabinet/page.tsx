@@ -132,7 +132,7 @@ function Cabinet() {
         <div className="mt-6 space-y-3">
           {orders.length === 0 && <p className="text-sm text-stone-500">Заказов пока нет — самое время это исправить.</p>}
           {orders.map((o) => (
-            <Link key={o.id} href={`/orders/${o.id}`} className="card flex items-center gap-4 p-4 transition-shadow hover:shadow-md">
+            <Link key={o.id} href={`/orders/${o.id}`} className="card flex items-center gap-4 p-4 transition hover:ring-stone-400">
               <span className="font-display flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-base font-bold text-orange-700">
                 {(o.items[0]?.name ?? o.chefName).trim().charAt(0).toUpperCase()}
               </span>

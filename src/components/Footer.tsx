@@ -6,11 +6,11 @@ export default function Footer() {
       <div className="mx-auto grid max-w-7xl gap-8 px-4 py-10 sm:px-6 md:grid-cols-4">
         <div>
           <div className="flex items-center gap-2">
-            <span className="font-display flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 text-sm font-bold text-white">
+            <span className="font-display flex h-8 w-8 items-center justify-center rounded-lg bg-stone-950 text-sm text-white">
               FW
             </span>
-            <span className="font-extrabold">
-              Fork<span className="text-orange-500">Work</span>
+            <span className="font-display">
+              Fork<span className="text-orange-600">Work</span>
             </span>
           </div>
           <p className="mt-3 text-sm text-stone-500">

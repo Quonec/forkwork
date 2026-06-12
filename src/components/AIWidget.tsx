@@ -46,15 +46,15 @@ export default function AIWidget() {
     <>
       <button
         onClick={() => setOpen(!open)}
-        className="font-display fixed bottom-5 right-5 z-[1200] flex h-14 w-14 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 text-lg font-bold text-white shadow-lg shadow-orange-500/30 transition-transform hover:scale-105"
+        className="font-display fixed bottom-5 right-5 z-[1200] flex h-14 w-14 items-center justify-center rounded-full bg-stone-950 text-lg text-white shadow-lg shadow-stone-950/25 transition-transform hover:scale-105"
         title="AI-агент ForkWork"
       >
         {open ? "✕" : "AI"}
       </button>
 
       {open && (
-        <div className="fixed bottom-24 right-5 z-[1200] flex h-[480px] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-2xl bg-white shadow-2xl ring-1 ring-stone-200">
-          <div className="flex items-center gap-2 border-b border-stone-100 bg-gradient-to-r from-orange-500 to-amber-500 px-4 py-3 text-white">
+        <div className="fixed bottom-24 right-5 z-[1200] flex h-[480px] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-xl bg-white shadow-2xl ring-1 ring-stone-200">
+          <div className="flex items-center gap-2 bg-stone-950 px-4 py-3 text-white">
             <span className="font-display flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-sm font-bold">AI</span>
             <div>
               <p className="text-sm font-bold leading-tight">AI-агент ForkWork</p>
@@ -65,7 +65,7 @@ export default function AIWidget() {
           <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
             {msgs.map((m, i) => (
               <div key={i} className={`msg-in flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[85%] rounded-2xl px-3 py-2 text-sm ${m.from === "user" ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-800"}`}>
+                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${m.from === "user" ? "bg-stone-950 text-white" : "bg-stone-100 text-stone-900"}`}>
                   {m.text}
                   {m.recs && m.recs.length > 0 && (
                     <div className="mt-2 space-y-1.5">
@@ -74,9 +74,9 @@ export default function AIWidget() {
                           key={`${r.type}-${r.id}`}
                           href={r.href}
                           onClick={() => setOpen(false)}
-                          className="flex items-center gap-2 rounded-xl bg-white px-2.5 py-2 ring-1 ring-stone-200 transition-colors hover:ring-orange-300"
+                          className="flex items-center gap-2 rounded-lg bg-white px-2.5 py-2 ring-1 ring-stone-200 transition-colors hover:ring-stone-950"
                         >
-                          <span className="font-display flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-orange-100 text-xs font-bold text-orange-800">
+                          <span className="font-display flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-orange-100 text-xs text-stone-900/60">
                             {r.title.trim().charAt(0).toUpperCase()}
                           </span>
                           <span className="min-w-0">
@@ -97,7 +97,7 @@ export default function AIWidget() {
           {msgs.length <= 1 && (
             <div className="flex flex-wrap gap-1.5 px-3 pb-2">
               {SUGGESTIONS.map((s) => (
-                <button key={s} onClick={() => ask(s)} className="chip bg-orange-50 text-orange-700 ring-1 ring-orange-200 hover:bg-orange-100">
+                <button key={s} onClick={() => ask(s)} className="chip bg-stone-100 text-stone-700 hover:bg-stone-200">
                   {s}
                 </button>
               ))}

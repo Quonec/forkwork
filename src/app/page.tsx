@@ -16,21 +16,20 @@ export default function Home() {
   return (
     <div>
       {/* Хиро */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-stone-900 via-stone-800 to-orange-950 text-white">
-        <div className="pointer-events-none absolute inset-0 opacity-25 [background:radial-gradient(60%_60%_at_70%_30%,#d8a73d_0%,transparent_60%)]" />
+      <section className="relative overflow-hidden bg-stone-950 text-white">
         <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24">
           <div>
-            <span className="chip bg-white/10 uppercase tracking-widest text-orange-200 ring-1 ring-white/20">
+            <span className="chip bg-white/10 uppercase tracking-widest text-orange-200">
               Foodtech-платформа поваров и горожан
             </span>
-            <h1 className="mt-5 text-4xl font-extrabold leading-tight sm:text-5xl">
+            <h1 className="font-display mt-5 text-4xl leading-tight sm:text-6xl">
               Город готовит <span className="text-orange-400">вживую</span>
             </h1>
             <p className="mt-4 max-w-md text-lg text-stone-300">
               Находите поваров на карте, смотрите стримы с кухонь, заказывайте блюда из эфира и общайтесь напрямую — всё в одном месте.
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
-              <Link href="/map" className="btn bg-orange-500 px-6 py-3 text-white hover:bg-orange-600">
+              <Link href="/map" className="btn bg-white px-6 py-3 text-stone-950 hover:bg-stone-100">
                 Открыть карту
               </Link>
               <Link href="/streams" className="btn bg-white/10 px-6 py-3 text-white ring-1 ring-white/25 hover:bg-white/20">
@@ -44,8 +43,8 @@ export default function Home() {
                 ["30+", "блюд в меню"],
                 ["10%", "комиссия платформы"],
               ].map(([n, label]) => (
-                <div key={label} className="rounded-2xl bg-white/5 px-2 py-3 ring-1 ring-white/10">
-                  <div className="text-xl font-extrabold text-orange-300">{n}</div>
+                <div key={label} className="rounded-xl bg-white/5 px-2 py-3 ring-1 ring-white/10">
+                  <div className="font-display text-xl text-orange-300">{n}</div>
                   <div className="text-[11px] text-stone-400">{label}</div>
                 </div>
               ))}
@@ -53,7 +52,7 @@ export default function Home() {
           </div>
           <div className="hidden items-center justify-center md:flex">
             <div className="relative">
-              <div className="font-display flex h-72 w-72 items-center justify-center rounded-full bg-gradient-to-br from-orange-500/30 to-amber-500/10 text-[120px] font-bold text-orange-300/60 ring-1 ring-white/10">
+              <div className="font-display flex h-72 w-72 items-center justify-center rounded-full bg-white/5 text-[120px] text-orange-300/70 ring-1 ring-white/10">
                 FW
               </div>
               <div className="absolute -left-8 top-8 rounded-xl bg-white px-4 py-3 text-stone-900 shadow-xl">
@@ -77,7 +76,7 @@ export default function Home() {
             ["03", "Получите заказ", "Оплата кошельком ForkCoins, статус заказа в реальном времени, отзыв после."],
           ].map(([num, title, text]) => (
             <div key={title} className="card p-6">
-              <div className="font-display text-3xl font-bold text-orange-400">{num}</div>
+              <div className="font-display text-3xl text-orange-500">{num}</div>
               <h3 className="mt-3 font-bold">{title}</h3>
               <p className="mt-1.5 text-sm text-stone-500">{text}</p>
             </div>
@@ -117,12 +116,12 @@ export default function Home() {
 
       {/* CTA для поваров */}
       <section className="mx-auto max-w-7xl px-4 pb-16 sm:px-6">
-        <div className="card flex flex-col items-center gap-4 bg-gradient-to-r from-orange-500 to-amber-500 p-10 text-center text-white ring-0 md:flex-row md:justify-between md:text-left">
+        <div className="card flex flex-col items-center gap-4 bg-stone-950 p-10 text-center text-white ring-0 md:flex-row md:justify-between md:text-left">
           <div>
-            <h3 className="text-2xl font-extrabold">Готовите так, что соседи занимают очередь?</h3>
-            <p className="mt-1 text-orange-50">Станьте поваром ForkWork: стримы, заказы и монетизация ваших рецептов.</p>
+            <h3 className="font-display text-2xl">Готовите так, что соседи занимают очередь?</h3>
+            <p className="mt-1 text-stone-300">Станьте поваром ForkWork: стримы, заказы и монетизация ваших рецептов.</p>
           </div>
-          <Link href="/register?role=chef" className="btn shrink-0 bg-white px-6 py-3 text-orange-600 hover:bg-orange-50">
+          <Link href="/register?role=chef" className="btn shrink-0 bg-white px-6 py-3 text-stone-950 hover:bg-stone-100">
             Стать поваром
           </Link>
         </div>

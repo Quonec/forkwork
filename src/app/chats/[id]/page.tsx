@@ -102,7 +102,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
             <p key={m.id} className="text-center text-[11px] text-stone-400">— {m.text} —</p>
           ) : (
             <div key={m.id} className={`msg-in flex ${m.senderId === me ? "justify-end" : "justify-start"}`}>
-              <div className={`max-w-[80%] rounded-2xl px-3.5 py-2 text-sm ${m.senderId === me ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-800"}`}>
+              <div className={`max-w-[80%] rounded-xl px-3.5 py-2 text-sm ${m.senderId === me ? "bg-stone-950 text-white" : "bg-stone-100 text-stone-900"}`}>
                 {m.text}
               </div>
             </div>

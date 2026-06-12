@@ -22,11 +22,11 @@ export default async function Header() {
     <header className="sticky top-0 z-[1100] border-b border-stone-200/80 bg-white/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="font-display flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 text-base font-bold text-white shadow-sm">
+          <span className="font-display flex h-9 w-9 items-center justify-center rounded-lg bg-stone-950 text-base text-white">
             FW
           </span>
-          <span className="text-lg font-extrabold tracking-tight">
-            Fork<span className="text-orange-500">Work</span>
+          <span className="font-display text-lg tracking-tight">
+            Fork<span className="text-orange-600">Work</span>
           </span>
         </Link>
 
@@ -46,7 +46,7 @@ export default async function Header() {
           {user && (
             <Link
               href={user.role === "chef" ? "/kitchen?tab=wallet" : "/cabinet?tab=wallet"}
-              className="chip hidden bg-amber-50 text-amber-700 ring-1 ring-amber-200 sm:inline-flex"
+              className="chip hidden bg-stone-100 font-semibold text-stone-900 sm:inline-flex"
               title="Внутренний кошелёк"
             >
               {fmtFC(balance)}
@@ -55,8 +55,8 @@ export default async function Header() {
           <CartBadge />
           {user ? (
             <details className="group relative">
-              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-stone-100 [&::-webkit-details-marker]:hidden">
-                <span className="font-display flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-800">
+              <summary className="flex cursor-pointer list-none items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-stone-100 [&::-webkit-details-marker]:hidden">
+                <span className="font-display flex h-8 w-8 items-center justify-center rounded-full bg-stone-950 text-sm text-white">
                   {user.name.trim().charAt(0).toUpperCase()}
                 </span>
                 <span className="hidden max-w-[120px] truncate text-sm font-semibold sm:block">{user.name}</span>

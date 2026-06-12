@@ -22,16 +22,17 @@ export function timeAgo(iso: string): string {
 export const PRICE_LEVELS = ["", "₽", "₽₽", "₽₽₽"];
 export const DIFFICULTY_RU = ["", "Легко", "Средне", "Сложно"];
 
-const GRADIENTS = [
-  "from-orange-100 to-amber-50",
-  "from-amber-200 to-orange-50",
-  "from-stone-200 to-amber-50",
-  "from-orange-200 to-stone-50",
-  "from-amber-100 to-stone-100",
-  "from-stone-100 to-orange-100",
+// Плоские светло-охристые заливки плиток (стиль Uber — без градиентов)
+const TILE_TONES = [
+  "bg-orange-100",
+  "bg-amber-100",
+  "bg-stone-100",
+  "bg-orange-50",
+  "bg-amber-200",
+  "bg-stone-200",
 ];
 
-export const gradientFor = (id: number) => GRADIENTS[id % GRADIENTS.length];
+export const gradientFor = (id: number) => TILE_TONES[id % TILE_TONES.length];
 
 export const plural = (n: number, one: string, few: string, many: string) => {
   const m10 = n % 10, m100 = n % 100;

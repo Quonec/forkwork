@@ -5,7 +5,7 @@ import { PRICE_LEVELS, plural } from "@/lib/format";
 
 export function ChefCardView({ chef }: { chef: ChefCard }) {
   return (
-    <Link href={`/chefs/${chef.id}`} className="card group block overflow-hidden transition-shadow hover:shadow-md">
+    <Link href={`/chefs/${chef.id}`} className="card group block overflow-hidden transition hover:ring-stone-400">
       <div className="relative">
         <Monogram label={chef.name} id={chef.id} className="h-28 w-full" textSize="text-6xl" />
         <div className="absolute left-3 top-3 flex gap-1.5">
