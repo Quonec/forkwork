@@ -22,22 +22,21 @@ export function LiveBadge({ small = false }: { small?: boolean }) {
   );
 }
 
-export function EmojiCover({
-  emoji,
+export function Monogram({
+  label,
   id,
   className = "",
   textSize = "text-5xl",
 }: {
-  emoji: string;
+  label: string;
   id: number;
   className?: string;
   textSize?: string;
 }) {
+  const letter = (label.trim().charAt(0) || "F").toUpperCase();
   return (
     <div className={`flex items-center justify-center bg-gradient-to-br ${gradientFor(id)} ${className}`}>
-      <span className={textSize} role="img">
-        {emoji}
-      </span>
+      <span className={`font-display ${textSize} select-none leading-none text-orange-900/35`}>{letter}</span>
     </div>
   );
 }
@@ -68,10 +67,10 @@ export function SectionTitle({
   );
 }
 
-export function Empty({ icon = "🍽️", text, children }: { icon?: string; text: string; children?: ReactNode }) {
+export function Empty({ text, children }: { icon?: string; text: string; children?: ReactNode }) {
   return (
     <div className="card flex flex-col items-center gap-3 px-6 py-12 text-center">
-      <div className="text-4xl">{icon}</div>
+      <div className="h-px w-10 bg-stone-300" />
       <p className="text-sm text-stone-500">{text}</p>
       {children}
     </div>

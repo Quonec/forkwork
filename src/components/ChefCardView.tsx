@@ -1,13 +1,13 @@
 import Link from "next/link";
 import type { ChefCard } from "@/lib/types";
-import { Stars, LiveBadge, EmojiCover } from "./ui";
+import { Stars, LiveBadge, Monogram } from "./ui";
 import { PRICE_LEVELS, plural } from "@/lib/format";
 
 export function ChefCardView({ chef }: { chef: ChefCard }) {
   return (
     <Link href={`/chefs/${chef.id}`} className="card group block overflow-hidden transition-shadow hover:shadow-md">
       <div className="relative">
-        <EmojiCover emoji={chef.avatar} id={chef.id} className="h-28 w-full" textSize="text-6xl" />
+        <Monogram label={chef.name} id={chef.id} className="h-28 w-full" textSize="text-6xl" />
         <div className="absolute left-3 top-3 flex gap-1.5">
           {chef.liveStreamId && <LiveBadge small />}
           {chef.available ? (
@@ -23,7 +23,7 @@ export function ChefCardView({ chef }: { chef: ChefCard }) {
           <span className="shrink-0 text-xs font-bold text-stone-400">{PRICE_LEVELS[chef.priceLevel]}</span>
         </div>
         <p className="mt-0.5 text-xs text-stone-500">
-          {chef.cuisineEmoji} {chef.cuisineName} · {chef.specialization}
+          {chef.cuisineName} · {chef.specialization}
         </p>
         <div className="mt-2.5 flex items-center justify-between">
           <Stars rating={chef.rating} size="text-xs" />

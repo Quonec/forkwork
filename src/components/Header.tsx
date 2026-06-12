@@ -22,8 +22,8 @@ export default async function Header() {
     <header className="sticky top-0 z-[1100] border-b border-stone-200/80 bg-white/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center gap-4 px-4 sm:px-6">
         <Link href="/" className="flex items-center gap-2.5">
-          <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-gradient-to-br from-orange-500 to-amber-500 text-lg shadow-sm">
-            🍴
+          <span className="font-display flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 text-base font-bold text-white shadow-sm">
+            FW
           </span>
           <span className="text-lg font-extrabold tracking-tight">
             Fork<span className="text-orange-500">Work</span>
@@ -49,15 +49,15 @@ export default async function Header() {
               className="chip hidden bg-amber-50 text-amber-700 ring-1 ring-amber-200 sm:inline-flex"
               title="Внутренний кошелёк"
             >
-              💰 {fmtFC(balance)}
+              {fmtFC(balance)}
             </Link>
           )}
           <CartBadge />
           {user ? (
             <details className="group relative">
               <summary className="flex cursor-pointer list-none items-center gap-2 rounded-xl px-2 py-1.5 hover:bg-stone-100 [&::-webkit-details-marker]:hidden">
-                <span className="flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-base">
-                  {user.avatar}
+                <span className="font-display flex h-8 w-8 items-center justify-center rounded-full bg-orange-100 text-sm font-bold text-orange-800">
+                  {user.name.trim().charAt(0).toUpperCase()}
                 </span>
                 <span className="hidden max-w-[120px] truncate text-sm font-semibold sm:block">{user.name}</span>
               </summary>
@@ -65,7 +65,7 @@ export default async function Header() {
                 <div className="border-b border-stone-100 px-3 py-2">
                   <p className="truncate text-sm font-semibold">{user.name}</p>
                   <p className="text-xs text-stone-500">
-                    {user.role === "chef" ? "👨‍🍳 Повар" : user.role === "admin" ? "🛡️ Администратор" : "🙂 Заказчик"}
+                    {user.role === "chef" ? "Повар" : user.role === "admin" ? "Администратор" : "Заказчик"}
                   </p>
                 </div>
                 <MenuLink href="/cabinet" label="Мой кабинет" />

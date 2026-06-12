@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getChef, listDishes, listChefReviews, listRecipes } from "@/lib/queries";
 import { getSessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
-import { Stars, LiveBadge, EmojiCover } from "@/components/ui";
+import { Stars, LiveBadge, Monogram } from "@/components/ui";
 import { RecipeCardView } from "@/components/RecipeCardView";
 import { PRICE_LEVELS, fmtDate, plural } from "@/lib/format";
 import DishList from "./DishList";
@@ -28,7 +28,7 @@ export default async function ChefPage({ params }: { params: Promise<{ id: strin
     <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6">
       {/* Шапка профиля */}
       <div className="card overflow-hidden">
-        <EmojiCover emoji={chef.avatar} id={chef.id} className="h-36 w-full" textSize="text-7xl" />
+        <Monogram label={chef.name} id={chef.id} className="h-36 w-full" textSize="text-7xl" />
         <div className="flex flex-col gap-4 p-6 md:flex-row md:items-start md:justify-between">
           <div className="min-w-0">
             <div className="flex flex-wrap items-center gap-2">
@@ -45,7 +45,7 @@ export default async function ChefPage({ params }: { params: Promise<{ id: strin
               )}
             </div>
             <p className="mt-1 text-sm text-stone-500">
-              {chef.cuisineEmoji} {chef.cuisineName} · {chef.specialization} · {PRICE_LEVELS[chef.priceLevel]}
+              {chef.cuisineName} · {chef.specialization} · {PRICE_LEVELS[chef.priceLevel]}
             </p>
             <p className="mt-3 max-w-2xl text-sm leading-relaxed text-stone-600">{chef.bio}</p>
             <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-stone-500">
@@ -53,9 +53,9 @@ export default async function ChefPage({ params }: { params: Promise<{ id: strin
               <span>
                 {chef.reviewsCount} {plural(chef.reviewsCount, "отзыв", "отзыва", "отзывов")}
               </span>
-              <span>📍 {chef.address}</span>
-              <span>🕐 {chef.workHours}</span>
-              <span>{[chef.delivery ? "🛵 доставка" : "", chef.pickup ? "🚶 самовывоз" : ""].filter(Boolean).join(" · ")}</span>
+              <span>{chef.address}</span>
+              <span>{chef.workHours}</span>
+              <span>{[chef.delivery ? "доставка" : "", chef.pickup ? "самовывоз" : ""].filter(Boolean).join(" · ")}</span>
             </div>
           </div>
           <ChefActions chefId={chef.id} chefName={chef.name} initialFavorite={isFavorite} loggedIn={!!user} liveStreamId={chef.liveStreamId} />
@@ -93,7 +93,9 @@ export default async function ChefPage({ params }: { params: Promise<{ id: strin
               <div key={r.id} className="card p-5">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-stone-100">{r.authorAvatar}</span>
+                    <span className="font-display flex h-8 w-8 items-center justify-center rounded-full bg-stone-100 text-sm font-bold text-stone-600">
+                      {r.authorName.trim().charAt(0).toUpperCase()}
+                    </span>
                     <div>
                       <p className="text-sm font-semibold">{r.authorName}</p>
                       <p className="text-[11px] text-stone-400">{fmtDate(r.createdAt)}</p>

@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getRecipe, getChef } from "@/lib/queries";
-import { EmojiCover, Stars } from "@/components/ui";
+import { Monogram, Stars } from "@/components/ui";
 import { DIFFICULTY_RU } from "@/lib/format";
 
 export const dynamic = "force-dynamic";
@@ -15,10 +15,10 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
   return (
     <div className="mx-auto max-w-4xl px-4 py-8 sm:px-6">
       <div className="card overflow-hidden">
-        <EmojiCover emoji={recipe.emoji} id={recipe.id + 2} className="h-40 w-full" textSize="text-7xl" />
+        <Monogram label={recipe.title} id={recipe.id + 2} className="h-40 w-full" textSize="text-7xl" />
         <div className="p-6">
           <div className="flex flex-wrap gap-2">
-            <span className="chip bg-stone-100 text-stone-600">⏱ {recipe.timeMin} мин</span>
+            <span className="chip bg-stone-100 text-stone-600">{recipe.timeMin} мин</span>
             <span className="chip bg-stone-100 text-stone-600">Сложность: {DIFFICULTY_RU[recipe.difficulty]}</span>
             {recipe.tags.split(",").filter(Boolean).map((t) => (
               <span key={t} className="chip bg-orange-50 text-orange-600">#{t.trim()}</span>
@@ -29,7 +29,9 @@ export default async function RecipePage({ params }: { params: Promise<{ id: str
 
           {chef && (
             <Link href={`/chefs/${chef.id}`} className="mt-4 flex w-fit items-center gap-3 rounded-2xl bg-stone-50 px-4 py-3 transition-colors hover:bg-orange-50">
-              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-white text-xl ring-1 ring-stone-200">{chef.avatar}</span>
+              <span className="font-display flex h-10 w-10 items-center justify-center rounded-full bg-white text-base font-bold text-orange-700 ring-1 ring-stone-200">
+                {chef.name.trim().charAt(0).toUpperCase()}
+              </span>
               <span>
                 <span className="block text-sm font-bold">{chef.name}</span>
                 <Stars rating={chef.rating} size="text-xs" />

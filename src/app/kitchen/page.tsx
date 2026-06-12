@@ -19,15 +19,15 @@ type KitchenData = {
 };
 
 const TABS = [
-  ["overview", "📊 Обзор"],
-  ["orders", "🧾 Заказы"],
-  ["dishes", "🍲 Блюда"],
-  ["recipes", "📖 Рецепты"],
-  ["streams", "📺 Стримы"],
-  ["chats", "💬 Чаты"],
-  ["reviews", "⭐ Отзывы"],
-  ["profile", "👤 Профиль"],
-  ["wallet", "💰 Финансы"],
+  ["overview", "Обзор"],
+  ["orders", "Заказы"],
+  ["dishes", "Блюда"],
+  ["recipes", "Рецепты"],
+  ["streams", "Стримы"],
+  ["chats", "Чаты"],
+  ["reviews", "Отзывы"],
+  ["profile", "Профиль"],
+  ["wallet", "Финансы"],
 ] as const;
 
 function Kitchen() {
@@ -74,10 +74,10 @@ function Kitchen() {
           <p className="text-sm text-stone-500">Профиль, меню, эфиры, заказы и аналитика — всё под рукой.</p>
         </div>
         <button
-          onClick={() => act({ action: "availability", available: !profile.available }, profile.available ? "Приём заказов выключен" : "Приём заказов включён ✅")}
+          onClick={() => act({ action: "availability", available: !profile.available }, profile.available ? "Приём заказов выключен" : "Приём заказов включён")}
           className={`btn ${profile.available ? "bg-emerald-500 text-white hover:bg-emerald-600" : "bg-stone-200 text-stone-600"}`}
         >
-          {profile.available ? "🟢 Принимаю заказы" : "⚪ Не принимаю заказы"}
+          {profile.available ? "Принимаю заказы" : "Не принимаю заказы"}
         </button>
       </div>
 
@@ -104,19 +104,19 @@ function Kitchen() {
       {tab === "overview" && (
         <div className="mt-6">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <Stat label="Выручка (после комиссии)" value={fmtFC(stats.revenue)} emoji="💰" />
-            <Stat label="Заказов всего / выполнено" value={`${stats.ordersCount} / ${stats.doneCount}`} emoji="🧾" />
-            <Stat label="Средний чек" value={fmtFC(stats.avgCheck)} emoji="🧮" />
-            <Stat label="Рейтинг" value={`★ ${stats.avgRating}`} emoji="⭐" />
-            <Stat label="Просмотров стримов" value={String(stats.streamViews)} emoji="📺" />
-            <Stat label="Заказов из стримов" value={String(stats.fromStream)} emoji="🛒" />
-            <Stat label="Конверсия стрим → заказ" value={`${stats.conversion}%`} emoji="📈" />
-            <Stat label="Активных блюд" value={String(data.dishes.filter((d) => d.available).length)} emoji="🍲" />
+            <Stat label="Выручка (после комиссии)" value={fmtFC(stats.revenue)} />
+            <Stat label="Заказов всего / выполнено" value={`${stats.ordersCount} / ${stats.doneCount}`} />
+            <Stat label="Средний чек" value={fmtFC(stats.avgCheck)} />
+            <Stat label="Рейтинг" value={`★ ${stats.avgRating}`} />
+            <Stat label="Просмотров стримов" value={String(stats.streamViews)} />
+            <Stat label="Заказов из стримов" value={String(stats.fromStream)} />
+            <Stat label="Конверсия стрим → заказ" value={`${stats.conversion}%`} />
+            <Stat label="Активных блюд" value={String(data.dishes.filter((d) => d.available).length)} />
           </div>
           <div className="card mt-4 p-5">
             <h3 className="font-bold">Подсказка дня</h3>
             <p className="mt-1 text-sm text-stone-500">
-              Эфиры с закреплённой акцией дают в среднем больше заказов. Запустите стрим во вкладке «Стримы» и закрепите промо-сообщение 📌
+              Эфиры с закреплённой акцией дают в среднем больше заказов. Запустите стрим во вкладке «Стримы» и закрепите промо-сообщение.
             </p>
           </div>
         </div>
@@ -131,7 +131,9 @@ function Kitchen() {
             return (
               <div key={o.id} className="card p-4">
                 <div className="flex flex-wrap items-center gap-3">
-                  <span className="text-2xl">{o.items[0]?.emoji ?? "🍽️"}</span>
+                  <span className="font-display flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-base font-bold text-orange-700">
+                    {(o.items[0]?.name ?? o.customerName).trim().charAt(0).toUpperCase()}
+                  </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold">
                       #{o.id} · {o.customerName}
@@ -139,7 +141,7 @@ function Kitchen() {
                     </p>
                     <p className="truncate text-xs text-stone-500">{o.items.map((i) => `${i.name} ×${i.qty}`).join(", ")}</p>
                     <p className="text-[11px] text-stone-400">
-                      {o.deliveryType === "delivery" ? `🛵 ${o.address}` : "🚶 самовывоз"} · {fmtDateTime(o.createdAt)}
+                      {o.deliveryType === "delivery" ? `доставка: ${o.address}` : "самовывоз"} · {fmtDateTime(o.createdAt)}
                     </p>
                   </div>
                   <div className="text-right">
@@ -170,7 +172,9 @@ function Kitchen() {
           {data.chats.length === 0 && <p className="text-sm text-stone-500">Запросов на личный чат пока нет.</p>}
           {data.chats.map((c) => (
             <div key={c.id} className="card flex items-center gap-3 p-4">
-              <span className="flex h-11 w-11 items-center justify-center rounded-full bg-stone-100 text-xl">{c.customerAvatar}</span>
+              <span className="font-display flex h-11 w-11 items-center justify-center rounded-full bg-stone-100 text-base font-bold text-stone-600">
+                {c.customerName.trim().charAt(0).toUpperCase()}
+              </span>
               <div className="flex-1">
                 <p className="font-bold">{c.customerName}</p>
                 <p className="text-xs text-stone-400">{timeAgo(c.createdAt)}</p>
@@ -193,7 +197,7 @@ function Kitchen() {
           {data.reviews.map((r) => (
             <div key={r.id} className={`card p-5 ${r.status === "hidden" ? "opacity-50" : ""}`}>
               <div className="flex items-center justify-between">
-                <p className="text-sm font-bold">{r.authorAvatar} {r.authorName}</p>
+                <p className="text-sm font-bold">{r.authorName}</p>
                 <span className="text-amber-500">{"★".repeat(r.rating)}<span className="text-stone-200">{"★".repeat(5 - r.rating)}</span></span>
               </div>
               <p className="mt-2 text-sm text-stone-700">{r.text}</p>
@@ -215,12 +219,11 @@ function Kitchen() {
   );
 }
 
-function Stat({ label, value, emoji }: { label: string; value: string; emoji: string }) {
+function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="card p-5">
-      <div className="text-2xl">{emoji}</div>
-      <p className="mt-2 text-lg font-extrabold">{value}</p>
-      <p className="text-xs text-stone-500">{label}</p>
+      <p className="font-display text-xl font-bold text-stone-900">{value}</p>
+      <p className="mt-1 text-xs uppercase tracking-wide text-stone-500">{label}</p>
     </div>
   );
 }
@@ -268,27 +271,24 @@ function ReviewReply({ reviewId, act }: { reviewId: number; act: (b: Record<stri
   return (
     <div className="mt-2 flex gap-2">
       <input className="input !py-1.5 text-sm" value={text} onChange={(e) => setText(e.target.value)} placeholder="Ваш ответ…" />
-      <button onClick={() => act({ action: "review_reply", id: reviewId, text }, "Ответ опубликован ✅")} className="btn-primary !py-1.5 text-xs">OK</button>
+      <button onClick={() => act({ action: "review_reply", id: reviewId, text }, "Ответ опубликован")} className="btn-primary !py-1.5 text-xs">OK</button>
     </div>
   );
 }
 
 function DishesTab({ dishes, act }: { dishes: KitchenData["dishes"]; act: (b: Record<string, unknown>, n?: string) => Promise<boolean> }) {
-  const [form, setForm] = useState({ name: "", description: "", price: 300, emoji: "🍽️", tags: "" });
+  const [form, setForm] = useState({ name: "", description: "", price: 300, tags: "" });
   return (
     <div className="mt-6 grid gap-4 lg:grid-cols-[320px_1fr]">
       <div className="card h-fit space-y-3 p-5">
         <h3 className="font-bold">Новое блюдо</h3>
         <input className="input" placeholder="Название" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
         <textarea className="input h-20 resize-none" placeholder="Описание" value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} />
-        <div className="flex gap-2">
-          <input type="number" className="input" placeholder="Цена FC" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
-          <input className="input !w-20 text-center" value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })} />
-        </div>
+        <input type="number" className="input" placeholder="Цена FC" value={form.price} onChange={(e) => setForm({ ...form, price: Number(e.target.value) })} />
         <input className="input" placeholder="Теги через запятую" value={form.tags} onChange={(e) => setForm({ ...form, tags: e.target.value })} />
         <button
           onClick={async () => {
-            if (await act({ action: "dish_add", ...form }, "Блюдо добавлено ✅")) setForm({ name: "", description: "", price: 300, emoji: "🍽️", tags: "" });
+            if (await act({ action: "dish_add", ...form }, "Блюдо добавлено")) setForm({ name: "", description: "", price: 300, tags: "" });
           }}
           className="btn-primary w-full"
         >
@@ -298,7 +298,9 @@ function DishesTab({ dishes, act }: { dishes: KitchenData["dishes"]; act: (b: Re
       <div className="space-y-3">
         {dishes.map((d) => (
           <div key={d.id} className={`card flex items-center gap-3 p-4 ${d.available ? "" : "opacity-60"}`}>
-            <span className="text-3xl">{d.emoji}</span>
+            <span className="font-display flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-lg font-bold text-orange-700">
+              {d.name.trim().charAt(0).toUpperCase()}
+            </span>
             <div className="min-w-0 flex-1">
               <p className="font-bold">{d.name}</p>
               <p className="truncate text-xs text-stone-500">{d.description}</p>
@@ -318,7 +320,7 @@ function DishesTab({ dishes, act }: { dishes: KitchenData["dishes"]; act: (b: Re
 }
 
 function RecipesTab({ recipes, act }: { recipes: KitchenData["recipes"]; act: (b: Record<string, unknown>, n?: string) => Promise<boolean> }) {
-  const [form, setForm] = useState({ title: "", description: "", timeMin: 30, difficulty: 2, emoji: "📖", ingredients: "", steps: "", tags: "" });
+  const [form, setForm] = useState({ title: "", description: "", timeMin: 30, difficulty: 2, ingredients: "", steps: "", tags: "" });
   return (
     <div className="mt-6 grid gap-4 lg:grid-cols-[360px_1fr]">
       <div className="card h-fit space-y-3 p-5">
@@ -332,7 +334,6 @@ function RecipesTab({ recipes, act }: { recipes: KitchenData["recipes"]; act: (b
             <option value={2}>Средне</option>
             <option value={3}>Сложно</option>
           </select>
-          <input className="input !w-20 text-center" value={form.emoji} onChange={(e) => setForm({ ...form, emoji: e.target.value })} />
         </div>
         <textarea className="input h-24 resize-none" placeholder={"Ингредиенты — по одному в строке"} value={form.ingredients} onChange={(e) => setForm({ ...form, ingredients: e.target.value })} />
         <textarea className="input h-28 resize-none" placeholder={"Шаги — по одному в строке"} value={form.steps} onChange={(e) => setForm({ ...form, steps: e.target.value })} />
@@ -345,9 +346,9 @@ function RecipesTab({ recipes, act }: { recipes: KitchenData["recipes"]; act: (b
                 ingredients: form.ingredients.split("\n").map((s) => s.trim()).filter(Boolean),
                 steps: form.steps.split("\n").map((s) => s.trim()).filter(Boolean),
               },
-              "Рецепт опубликован ✅"
+              "Рецепт опубликован"
             );
-            if (ok) setForm({ title: "", description: "", timeMin: 30, difficulty: 2, emoji: "📖", ingredients: "", steps: "", tags: "" });
+            if (ok) setForm({ title: "", description: "", timeMin: 30, difficulty: 2, ingredients: "", steps: "", tags: "" });
           }}
           className="btn-primary w-full"
         >
@@ -357,9 +358,11 @@ function RecipesTab({ recipes, act }: { recipes: KitchenData["recipes"]; act: (b
       <div className="space-y-3">
         {recipes.map((r) => (
           <div key={r.id} className="card flex items-center gap-3 p-4">
-            <span className="text-2xl">{r.emoji}</span>
+            <span className="font-display flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-sm font-bold text-orange-700">
+              {r.title.trim().charAt(0).toUpperCase()}
+            </span>
             <Link href={`/recipes/${r.id}`} className="flex-1 font-bold hover:text-orange-600">{r.title}</Link>
-            <span className="text-xs text-stone-400">⏱ {r.timeMin} мин</span>
+            <span className="text-xs text-stone-400">{r.timeMin} мин</span>
             <button onClick={() => confirm("Удалить рецепт?") && act({ action: "recipe_delete", id: r.id }, "Рецепт удалён")} className="btn-danger !py-1.5 text-xs">✕</button>
           </div>
         ))}
@@ -385,14 +388,14 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
       <div className="card h-fit space-y-3 p-5">
         <h3 className="font-bold">Новый эфир</h3>
         <input className="input" placeholder="Название эфира" value={title} onChange={(e) => setTitle(e.target.value)} />
-        <input className="input" placeholder="📌 Закреплённое сообщение (акция?)" value={pinned} onChange={(e) => setPinned(e.target.value)} />
+        <input className="input" placeholder="Закреплённое сообщение (акция?)" value={pinned} onChange={(e) => setPinned(e.target.value)} />
         <input className="input" placeholder="Теги через запятую" value={tags} onChange={(e) => setTags(e.target.value)} />
         <div>
           <p className="label">Блюда в эфире</p>
           <div className="flex flex-wrap gap-1.5">
             {dishes.filter((d) => d.available).map((d) => (
               <button key={d.id} onClick={() => toggleDish(d.id)} className={`chip ${selDishes.includes(d.id) ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-600"}`}>
-                {d.emoji} {d.name}
+                {d.name}
               </button>
             ))}
           </div>
@@ -406,31 +409,33 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
           onClick={async () => {
             const ok = await act(
               { action: "stream_create", title, pinnedMessage: pinned, tags, dishIds: selDishes, startNow, scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined },
-              startNow ? "Вы в эфире! 🔴" : "Эфир запланирован 📅"
+              startNow ? "Вы в эфире!" : "Эфир запланирован"
             );
             if (ok) { setTitle(""); setPinned(""); setTags(""); setSelDishes([]); }
           }}
           className="btn-primary w-full"
         >
-          {startNow ? "🔴 Начать эфир" : "📅 Запланировать"}
+          {startNow ? "Начать эфир" : "Запланировать"}
         </button>
       </div>
       <div className="space-y-3">
         {streams.map((s) => (
           <div key={s.id} className="card p-4">
             <div className="flex items-center gap-3">
-              <span className="text-xl">{s.status === "live" ? "🔴" : s.status === "scheduled" ? "📅" : "🎬"}</span>
+              <span className={`chip px-2 py-0.5 text-[10px] ${s.status === "live" ? "bg-red-600 text-white" : s.status === "scheduled" ? "bg-amber-100 text-amber-700" : "bg-stone-100 text-stone-500"}`}>
+                {s.status === "live" ? "LIVE" : s.status === "scheduled" ? "ПЛАН" : "АРХИВ"}
+              </span>
               <div className="min-w-0 flex-1">
                 <Link href={`/streams/${s.id}`} className="font-bold hover:text-orange-600">{s.title}</Link>
                 <p className="text-xs text-stone-400">
-                  {s.status === "live" ? `в эфире · 👁 ${s.viewers}` : s.status === "scheduled" ? `запланирован: ${s.scheduledAt ? fmtDateTime(s.scheduledAt) : "—"}` : "завершён"}
+                  {s.status === "live" ? `в эфире · ${s.viewers} зрит.` : s.status === "scheduled" ? `запланирован: ${s.scheduledAt ? fmtDateTime(s.scheduledAt) : "—"}` : "завершён"}
                 </p>
               </div>
               {s.status === "scheduled" && (
-                <button onClick={() => act({ action: "stream_start", id: s.id }, "Вы в эфире! 🔴")} className="btn-primary !py-1.5 text-xs">▶ Начать</button>
+                <button onClick={() => act({ action: "stream_start", id: s.id }, "Вы в эфире!")} className="btn-primary !py-1.5 text-xs">Начать</button>
               )}
               {s.status === "live" && (
-                <button onClick={() => act({ action: "stream_stop", id: s.id }, "Эфир завершён")} className="btn-danger !py-1.5 text-xs">⏹ Завершить</button>
+                <button onClick={() => act({ action: "stream_stop", id: s.id }, "Эфир завершён")} className="btn-danger !py-1.5 text-xs">Завершить</button>
               )}
             </div>
             {s.status === "live" && <PinEditor streamId={s.id} current={s.pinnedMessage} act={act} />}
@@ -446,8 +451,8 @@ function PinEditor({ streamId, current, act }: { streamId: number; current: stri
   const [text, setText] = useState(current);
   return (
     <div className="mt-3 flex gap-2">
-      <input className="input !py-1.5 text-sm" value={text} onChange={(e) => setText(e.target.value)} placeholder="📌 Закреплённое сообщение" />
-      <button onClick={() => act({ action: "stream_pin", id: streamId, text }, "Закреп обновлён 📌")} className="btn-secondary !py-1.5 text-xs">Закрепить</button>
+      <input className="input !py-1.5 text-sm" value={text} onChange={(e) => setText(e.target.value)} placeholder="Закреплённое сообщение" />
+      <button onClick={() => act({ action: "stream_pin", id: streamId, text }, "Закреп обновлён")} className="btn-secondary !py-1.5 text-xs">Закрепить</button>
     </div>
   );
 }
@@ -473,7 +478,7 @@ function ProfileTab({ profile, act }: { profile: KitchenData["profile"]; act: (b
           <label className="label">Кухня</label>
           <select className="input" value={form.cuisineId ?? 0} onChange={(e) => setForm({ ...form, cuisineId: Number(e.target.value) || null })}>
             <option value={0}>— не выбрана —</option>
-            {cuisines.map((c) => <option key={c.id} value={c.id}>{c.emoji} {c.name}</option>)}
+            {cuisines.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
           </select>
         </div>
         <div>
@@ -504,10 +509,10 @@ function ProfileTab({ profile, act }: { profile: KitchenData["profile"]; act: (b
             ))}
           </div>
         </div>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.delivery} onChange={(e) => setForm({ ...form, delivery: e.target.checked })} /> 🛵 Доставка</label>
-        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.pickup} onChange={(e) => setForm({ ...form, pickup: e.target.checked })} /> 🚶 Самовывоз</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.delivery} onChange={(e) => setForm({ ...form, delivery: e.target.checked })} /> Доставка</label>
+        <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={form.pickup} onChange={(e) => setForm({ ...form, pickup: e.target.checked })} /> Самовывоз</label>
       </div>
-      <button onClick={() => act({ action: "profile_update", ...form }, "Профиль сохранён ✅")} className="btn-primary">
+      <button onClick={() => act({ action: "profile_update", ...form }, "Профиль сохранён")} className="btn-primary">
         Сохранить профиль
       </button>
     </div>

@@ -20,8 +20,8 @@ export default function Home() {
         <div className="pointer-events-none absolute inset-0 opacity-25 [background:radial-gradient(60%_60%_at_70%_30%,#d8a73d_0%,transparent_60%)]" />
         <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24">
           <div>
-            <span className="chip bg-white/10 text-orange-200 ring-1 ring-white/20">
-              🍴 Foodtech-платформа поваров и горожан
+            <span className="chip bg-white/10 uppercase tracking-widest text-orange-200 ring-1 ring-white/20">
+              Foodtech-платформа поваров и горожан
             </span>
             <h1 className="mt-5 text-4xl font-extrabold leading-tight sm:text-5xl">
               Город готовит <span className="text-orange-400">вживую</span>
@@ -31,7 +31,7 @@ export default function Home() {
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link href="/map" className="btn bg-orange-500 px-6 py-3 text-white hover:bg-orange-600">
-                🗺️ Открыть карту
+                Открыть карту
               </Link>
               <Link href="/streams" className="btn bg-white/10 px-6 py-3 text-white ring-1 ring-white/25 hover:bg-white/20">
                 <span className="live-dot inline-block h-2 w-2 rounded-full bg-red-500" />
@@ -53,14 +53,14 @@ export default function Home() {
           </div>
           <div className="hidden items-center justify-center md:flex">
             <div className="relative">
-              <div className="flex h-72 w-72 items-center justify-center rounded-full bg-gradient-to-br from-orange-500/30 to-amber-500/10 text-[120px] ring-1 ring-white/10">
-                🍳
+              <div className="font-display flex h-72 w-72 items-center justify-center rounded-full bg-gradient-to-br from-orange-500/30 to-amber-500/10 text-[120px] font-bold text-orange-300/60 ring-1 ring-white/10">
+                FW
               </div>
-              <div className="absolute -left-8 top-8 rounded-2xl bg-white px-4 py-3 text-stone-900 shadow-xl">
+              <div className="absolute -left-8 top-8 rounded-xl bg-white px-4 py-3 text-stone-900 shadow-xl">
                 <LiveBadge small /> <span className="ml-1 text-sm font-semibold">Карбонара вживую</span>
               </div>
-              <div className="absolute -right-6 bottom-10 rounded-2xl bg-white px-4 py-3 text-stone-900 shadow-xl">
-                <span className="text-sm font-semibold">⭐ 4.9 · Нино Геловани</span>
+              <div className="absolute -right-6 bottom-10 rounded-xl bg-white px-4 py-3 text-stone-900 shadow-xl">
+                <span className="text-sm font-semibold">★ 4.9 · Нино Геловани</span>
               </div>
             </div>
           </div>
@@ -72,12 +72,12 @@ export default function Home() {
         <SectionTitle title="Как работает ForkWork" subtitle="Три шага от голода до горячего блюда" />
         <div className="grid gap-4 md:grid-cols-3">
           {[
-            ["🗺️", "Найдите повара", "Интерактивная карта с фильтрами по кухне, цене, рейтингу и live-статусу."],
-            ["📺", "Смотрите эфир", "Повар готовит в прямом эфире: чат, реакции и заказ блюда прямо из стрима."],
-            ["🛵", "Получите заказ", "Оплата кошельком ForkCoins, статус заказа в реальном времени, отзыв после."],
-          ].map(([emoji, title, text]) => (
+            ["01", "Найдите повара", "Интерактивная карта с фильтрами по кухне, цене, рейтингу и live-статусу."],
+            ["02", "Смотрите эфир", "Повар готовит в прямом эфире: чат, реакции и заказ блюда прямо из стрима."],
+            ["03", "Получите заказ", "Оплата кошельком ForkCoins, статус заказа в реальном времени, отзыв после."],
+          ].map(([num, title, text]) => (
             <div key={title} className="card p-6">
-              <div className="text-3xl">{emoji}</div>
+              <div className="font-display text-3xl font-bold text-orange-400">{num}</div>
               <h3 className="mt-3 font-bold">{title}</h3>
               <p className="mt-1.5 text-sm text-stone-500">{text}</p>
             </div>
@@ -123,7 +123,7 @@ export default function Home() {
             <p className="mt-1 text-orange-50">Станьте поваром ForkWork: стримы, заказы и монетизация ваших рецептов.</p>
           </div>
           <Link href="/register?role=chef" className="btn shrink-0 bg-white px-6 py-3 text-orange-600 hover:bg-orange-50">
-            👨‍🍳 Стать поваром
+            Стать поваром
           </Link>
         </div>
       </section>

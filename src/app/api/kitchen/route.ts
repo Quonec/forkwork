@@ -133,7 +133,7 @@ export async function POST(req: Request) {
       db.prepare(
         "INSERT INTO dishes (chef_id, name, description, price, emoji, tags, available, created_at) VALUES (?,?,?,?,?,?,1,?)"
       ).run(chefId, name, String(body.description ?? "").slice(0, 400), price,
-        String(body.emoji ?? "🍽️").slice(0, 8), String(body.tags ?? "").slice(0, 200), t);
+        String(body.emoji ?? "").slice(0, 8), String(body.tags ?? "").slice(0, 200), t);
       return json({ ok: true });
     }
     case "dish_toggle": {
@@ -158,7 +158,7 @@ export async function POST(req: Request) {
         "INSERT INTO recipes (chef_id, title, description, time_min, difficulty, emoji, ingredients, steps, tags, created_at) VALUES (?,?,?,?,?,?,?,?,?,?)"
       ).run(chefId, title, String(body.description ?? "").slice(0, 600),
         Math.max(1, Number(body.timeMin) || 30), Math.min(3, Math.max(1, Number(body.difficulty) || 2)),
-        String(body.emoji ?? "📖").slice(0, 8), JSON.stringify(ingredients), JSON.stringify(steps),
+        String(body.emoji ?? "").slice(0, 8), JSON.stringify(ingredients), JSON.stringify(steps),
         String(body.tags ?? "").slice(0, 200), t);
       return json({ ok: true });
     }

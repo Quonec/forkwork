@@ -6,7 +6,7 @@ import type { OrderRow } from "@/lib/types";
 import { ORDER_STATUS_RU, ORDER_FLOW } from "@/lib/types";
 import { fmtFC, fmtDateTime } from "@/lib/format";
 
-const STEP_ICONS: Record<string, string> = { new: "📝", accepted: "✅", cooking: "🍳", delivering: "🛵", done: "🎉" };
+const STEP_NUM: Record<string, string> = { new: "1", accepted: "2", cooking: "3", delivering: "4", done: "5" };
 
 export default function OrderPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
@@ -77,11 +77,11 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
               <div key={s} className="flex flex-1 items-center">
                 <div className="flex flex-col items-center">
                   <span
-                    className={`flex h-10 w-10 items-center justify-center rounded-full text-lg ${
+                    className={`font-display flex h-10 w-10 items-center justify-center rounded-full text-base font-bold ${
                       i <= stepIdx ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-400"
                     }`}
                   >
-                    {STEP_ICONS[s]}
+                    {STEP_NUM[s]}
                   </span>
                   <span className={`mt-1.5 text-[10px] font-semibold ${i <= stepIdx ? "text-orange-600" : "text-stone-400"}`}>
                     {ORDER_STATUS_RU[s]}
@@ -100,7 +100,9 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
       <div className="card mt-4 divide-y divide-stone-100">
         {order.items.map((i) => (
           <div key={i.dishId} className="flex items-center gap-3 p-4">
-            <span className="text-2xl">{i.emoji}</span>
+            <span className="font-display flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-sm font-bold text-orange-700">
+              {i.name.trim().charAt(0).toUpperCase()}
+            </span>
             <p className="flex-1 text-sm font-semibold">{i.name}</p>
             <p className="text-sm text-stone-500">× {i.qty}</p>
             <p className="w-24 text-right text-sm font-bold">{fmtFC(i.price * i.qty)}</p>
@@ -108,7 +110,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
         ))}
         <div className="flex items-center justify-between p-4">
           <p className="text-sm text-stone-500">
-            {order.deliveryType === "delivery" ? `🛵 Доставка: ${order.address}` : "🚶 Самовывоз"} · оплата:{" "}
+            {order.deliveryType === "delivery" ? `Доставка: ${order.address}` : "Самовывоз"} · оплата:{" "}
             {order.payment === "wallet" ? "кошелёк" : "карта"}
           </p>
           <p className="text-lg font-extrabold text-orange-600">{fmtFC(order.total)}</p>
@@ -146,7 +148,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
       )}
       {(order.hasReview || reviewSent) && order.status === "done" && (
         <p className="mt-6 rounded-xl bg-emerald-50 px-4 py-3 text-center text-sm text-emerald-700">
-          Спасибо за отзыв! Он уже учтён в рейтинге повара ⭐
+          Спасибо за отзыв! Он уже учтён в рейтинге повара.
         </p>
       )}
 

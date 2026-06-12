@@ -47,9 +47,10 @@ export default function MapView({
       const live = chef.liveStreamId
         ? `<span style="position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:8px;font-weight:800;padding:1px 4px;border-radius:99px;">LIVE</span>`
         : "";
+      const letter = (chef.name.trim().charAt(0) || "F").toUpperCase();
       const icon = L.divIcon({
         className: "fw-marker",
-        html: `<div style="position:relative;width:44px;height:44px;background:#fffdf7;border:3px solid ${ring};border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:20px;box-shadow:0 2px 8px rgba(62,50,20,.22);">${chef.avatar}${live}</div>`,
+        html: `<div style="position:relative;width:44px;height:44px;background:#fffdf7;border:3px solid ${ring};border-radius:50%;display:flex;align-items:center;justify-content:center;font:700 18px Georgia,serif;color:#6e6147;box-shadow:0 2px 8px rgba(62,50,20,.22);">${letter}${live}</div>`,
         iconSize: [44, 44],
         iconAnchor: [22, 22],
       });
@@ -57,7 +58,7 @@ export default function MapView({
       marker.bindPopup(
         `<div style="min-width:180px">
           <strong>${chef.name}</strong><br/>
-          <span style="color:#8d7d5c;font-size:12px">${chef.cuisineEmoji ?? ""} ${chef.cuisineName ?? ""} · ${chef.specialization}</span><br/>
+          <span style="color:#8d7d5c;font-size:12px">${chef.cuisineName ?? ""} · ${chef.specialization}</span><br/>
           <span style="color:#b48218;font-size:13px">★ ${chef.rating}</span>
           <span style="color:#b1a17d;font-size:11px"> · ${chef.address}</span><br/>
           <a href="/chefs/${chef.id}" style="display:inline-block;margin-top:6px;background:#c98f1d;color:#fffdf7;padding:5px 12px;border-radius:10px;font-size:12px;font-weight:700;text-decoration:none">Открыть профиль</a>

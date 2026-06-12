@@ -5,9 +5,9 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 
 const DEMO = [
-  ["user@forkwork.ru", "user123", "🙂 Заказчик Аня"],
-  ["chef@forkwork.ru", "chef123", "👨‍🍳 Повар Марко"],
-  ["admin@forkwork.ru", "admin123", "🛡️ Администратор"],
+  ["user@forkwork.ru", "user123", "Заказчик Аня"],
+  ["chef@forkwork.ru", "chef123", "Повар Марко"],
+  ["admin@forkwork.ru", "admin123", "Администратор"],
 ];
 
 export default function LoginPage() {

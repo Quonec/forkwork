@@ -41,7 +41,7 @@ function RegisterForm() {
           onClick={() => setRole("customer")}
           className={`card p-4 text-left transition-all ${role === "customer" ? "ring-2 ring-orange-500" : "hover:ring-stone-300"}`}
         >
-          <div className="text-2xl">🙂</div>
+          <div className="font-display text-xl font-bold text-orange-500">З</div>
           <p className="mt-2 font-bold">Заказчик</p>
           <p className="mt-0.5 text-xs text-stone-500">Смотрю, заказываю, оцениваю</p>
         </button>
@@ -49,7 +49,7 @@ function RegisterForm() {
           onClick={() => setRole("chef")}
           className={`card p-4 text-left transition-all ${role === "chef" ? "ring-2 ring-orange-500" : "hover:ring-stone-300"}`}
         >
-          <div className="text-2xl">👨‍🍳</div>
+          <div className="font-display text-xl font-bold text-orange-500">П</div>
           <p className="mt-2 font-bold">Повар</p>
           <p className="mt-0.5 text-xs text-stone-500">Готовлю, стримлю, продаю</p>
         </button>
@@ -79,7 +79,7 @@ function RegisterForm() {
           {busy ? "Создаём аккаунт…" : role === "chef" ? "Зарегистрироваться как повар" : "Зарегистрироваться"}
         </button>
         <p className="text-center text-xs text-stone-400">
-          Регистрируясь, вы соглашаетесь с правилами публикации и общения. Новичкам — 500 FC в подарок 🎁
+          Регистрируясь, вы соглашаетесь с правилами публикации и общения. Новичкам — 500 FC в подарок.
         </p>
         <p className="text-center text-sm text-stone-500">
           Уже с нами?{" "}

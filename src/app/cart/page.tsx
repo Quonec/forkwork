@@ -51,12 +51,12 @@ export default function CartPage() {
   if (cart.items.length === 0) {
     return (
       <div className="mx-auto max-w-2xl px-4 py-20 text-center">
-        <div className="text-6xl">🛒</div>
-        <h1 className="mt-4 text-2xl font-extrabold">Корзина пуста</h1>
+        <div className="mx-auto h-px w-12 bg-stone-300" />
+        <h1 className="mt-6 text-2xl font-extrabold">Корзина пуста</h1>
         <p className="mt-2 text-sm text-stone-500">Загляните на карту поваров или в live-эфиры — там точно что-то готовится.</p>
         <div className="mt-6 flex justify-center gap-3">
-          <Link href="/map" className="btn-primary">🗺️ К карте</Link>
-          <Link href="/streams" className="btn-secondary">📺 К стримам</Link>
+          <Link href="/map" className="btn-primary">К карте</Link>
+          <Link href="/streams" className="btn-secondary">К стримам</Link>
         </div>
       </div>
     );
@@ -67,13 +67,15 @@ export default function CartPage() {
       <h1 className="text-2xl font-extrabold">Корзина</h1>
       <p className="mt-1 text-sm text-stone-500">
         Заказ у повара: <span className="font-semibold text-stone-700">{cart.chefName}</span>
-        {cart.source === "stream" && <span className="ml-2 chip bg-red-50 text-red-600">из стрима 📺</span>}
+        {cart.source === "stream" && <span className="ml-2 chip bg-red-50 text-red-600">из стрима</span>}
       </p>
 
       <div className="card mt-5 divide-y divide-stone-100">
         {cart.items.map((i) => (
           <div key={i.dishId} className="flex items-center gap-4 p-4">
-            <span className="text-3xl">{i.emoji}</span>
+            <span className="font-display flex h-11 w-11 shrink-0 items-center justify-center rounded-lg bg-orange-50 text-lg font-bold text-orange-700">
+              {i.name.trim().charAt(0).toUpperCase()}
+            </span>
             <div className="min-w-0 flex-1">
               <p className="font-bold">{i.name}</p>
               <p className="text-sm text-stone-500">{fmtFC(i.price)} / шт</p>
@@ -93,10 +95,10 @@ export default function CartPage() {
           <label className="label">Способ получения</label>
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => setDeliveryType("delivery")} className={`btn ${deliveryType === "delivery" ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-700"}`}>
-              🛵 Доставка
+              Доставка
             </button>
             <button onClick={() => setDeliveryType("pickup")} className={`btn ${deliveryType === "pickup" ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-700"}`}>
-              🚶 Самовывоз
+              Самовывоз
             </button>
           </div>
         </div>
@@ -112,11 +114,11 @@ export default function CartPage() {
           <label className="label">Оплата</label>
           <div className="grid grid-cols-2 gap-2">
             <button onClick={() => setPayment("wallet")} className={`btn flex-col !items-start ${payment === "wallet" ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-700"}`}>
-              <span>💰 Кошелёк ForkCoins</span>
+              <span>Кошелёк ForkCoins</span>
               {balance !== null && <span className="text-xs opacity-80">баланс: {fmtFC(balance)}</span>}
             </button>
             <button onClick={() => setPayment("card")} className={`btn ${payment === "card" ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-700"}`}>
-              💳 Карта (демо)
+              Карта (демо)
             </button>
           </div>
         </div>
@@ -128,7 +130,7 @@ export default function CartPage() {
           </div>
           <div className="flex justify-between text-stone-500">
             <span>Доставка</span>
-            <span>{deliveryType === "delivery" ? "бесплатно 🎉" : "—"}</span>
+            <span>{deliveryType === "delivery" ? "бесплатно" : "—"}</span>
           </div>
           <div className="flex justify-between text-base font-extrabold">
             <span>Итого</span>
