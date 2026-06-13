@@ -5,6 +5,7 @@ import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { fmtFC, fmtDateTime, timeAgo } from "@/lib/format";
 import { StatusChip } from "@/components/StatusChip";
+import CameraStudio from "@/components/CameraStudio";
 import { ORDER_FLOW, ORDER_STATUS_RU, type CartItem } from "@/lib/types";
 
 type KitchenData = {
@@ -384,7 +385,9 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
     setSelDishes((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
 
   return (
-    <div className="mt-6 grid gap-4 lg:grid-cols-[360px_1fr]">
+    <div className="mt-6 space-y-4">
+      <CameraStudio />
+      <div className="grid gap-4 lg:grid-cols-[360px_1fr]">
       <div className="card h-fit space-y-3 p-5">
         <h3 className="font-bold">Новый эфир</h3>
         <input className="input" placeholder="Название эфира" value={title} onChange={(e) => setTitle(e.target.value)} />
@@ -442,6 +445,7 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
           </div>
         ))}
         {streams.length === 0 && <p className="text-sm text-stone-500">Эфиров ещё не было. Самое время начать!</p>}
+      </div>
       </div>
     </div>
   );
