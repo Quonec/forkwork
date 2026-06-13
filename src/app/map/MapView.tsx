@@ -1,13 +1,46 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import L from "leaflet";
-import "leaflet/dist/leaflet.css";
+import { useEffect, useRef, useState } from "react";
 import type { ChefCard } from "@/lib/types";
 
 const MOSCOW: [number, number] = [55.751, 37.615];
 // Демо-точка «вы здесь» — в проде заменяется геолокацией
 export const USER_POINT: [number, number] = [55.7468, 37.6064];
+
+const API_KEY = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY ?? "";
+
+/* eslint-disable @typescript-eslint/no-explicit-any */
+declare global {
+  interface Window {
+    ymaps?: any;
+  }
+}
+
+// Скрипт Яндекс.Карт подгружается один раз на всё приложение
+let loaderPromise: Promise<any> | null = null;
+function loadYmaps(): Promise<any> {
+  if (typeof window === "undefined") return Promise.reject(new Error("no window"));
+  if (window.ymaps?.Map) return Promise.resolve(window.ymaps);
+  if (!loaderPromise) {
+    loaderPromise = new Promise((resolve, reject) => {
+      const ready = () => window.ymaps.ready(() => resolve(window.ymaps));
+      const existing = document.getElementById("ymaps-script") as HTMLScriptElement | null;
+      if (existing) {
+        existing.addEventListener("load", ready);
+        existing.addEventListener("error", reject);
+        return;
+      }
+      const s = document.createElement("script");
+      s.id = "ymaps-script";
+      s.async = true;
+      s.src = `https://api-maps.yandex.ru/2.1/?lang=ru_RU${API_KEY ? `&apikey=${API_KEY}` : ""}`;
+      s.onload = ready;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  return loaderPromise;
+}
 
 export default function MapView({
   chefs,
@@ -19,85 +52,132 @@ export default function MapView({
   onSelect: (id: number | null) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const mapRef = useRef<L.Map | null>(null);
-  const markersRef = useRef<Map<number, L.Marker>>(new Map());
-  const routeRef = useRef<L.Polyline | null>(null);
+  const mapRef = useRef<any>(null);
+  const collRef = useRef<any>(null); // маркеры поваров + линия маршрута
+  const onSelectRef = useRef(onSelect);
+  onSelectRef.current = onSelect;
 
+  const [ready, setReady] = useState(false);
+  const [failed, setFailed] = useState(false);
+
+  // Инициализация карты
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
-    const map = L.map(containerRef.current, { zoomControl: false, attributionControl: true }).setView(MOSCOW, 13);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>',
-    }).addTo(map);
+    let cancelled = false;
+    loadYmaps()
+      .then((ymaps) => {
+        if (cancelled || !containerRef.current || mapRef.current) return;
+        const map = new ymaps.Map(
+          containerRef.current,
+          { center: MOSCOW, zoom: 13, controls: ["zoomControl", "geolocationControl"] },
+          { suppressMapOpenBlock: true, yandexMapDisablePoiInteractivity: true }
+        );
 
-    // «Вы здесь» — жёлтая точка, как точка подачи в такси
-    L.marker(USER_POINT, {
-      icon: L.divIcon({
-        className: "fw-marker",
-        html: `<div style="width:18px;height:18px;background:#fcd000;border:3px solid #171410;border-radius:50%;box-shadow:0 0 0 6px rgba(252,208,0,.25);"></div>`,
-        iconSize: [18, 18],
-        iconAnchor: [9, 9],
-      }),
-      interactive: false,
-    }).addTo(map);
+        // «Вы здесь» — жёлтая точка подачи, как в такси
+        map.geoObjects.add(
+          new ymaps.Placemark(
+            USER_POINT,
+            {},
+            {
+              iconLayout: ymaps.templateLayoutFactory.createClass(
+                `<div style="transform:translate(-9px,-9px);width:18px;height:18px;background:#fcd000;border:3px solid #171410;border-radius:50%;box-shadow:0 0 0 6px rgba(252,208,0,.25);"></div>`
+              ),
+              iconShape: { type: "Circle", coordinates: [0, 0], radius: 12 },
+            }
+          )
+        );
 
-    map.on("click", () => onSelect(null));
-    mapRef.current = map;
+        const coll = new ymaps.GeoObjectCollection();
+        map.geoObjects.add(coll);
+        map.events.add("click", () => onSelectRef.current(null));
+
+        mapRef.current = map;
+        collRef.current = coll;
+        setReady(true);
+      })
+      .catch(() => setFailed(true));
+
     return () => {
-      map.remove();
-      mapRef.current = null;
+      cancelled = true;
+      if (mapRef.current) {
+        mapRef.current.destroy();
+        mapRef.current = null;
+        collRef.current = null;
+      }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Маркеры синхронизируются с отфильтрованным списком; выбранный — крупнее, с жёлтым кольцом
+  // Перерисовка маркеров и маршрута при смене списка/выбора
   useEffect(() => {
+    if (!ready) return;
+    const ymaps = window.ymaps;
     const map = mapRef.current;
-    if (!map) return;
-    markersRef.current.forEach((m) => m.remove());
-    markersRef.current.clear();
+    const coll = collRef.current;
+    if (!ymaps || !map || !coll) return;
+
+    coll.removeAll();
 
     for (const chef of chefs) {
       if (chef.lat == null || chef.lng == null) continue;
       const isSel = chef.id === selected;
       const ring = isSel ? "#fcd000" : chef.liveStreamId ? "#dc2626" : chef.available ? "#10b981" : "#c0b08e";
       const size = isSel ? 52 : 44;
+      const letter = (chef.name.trim().charAt(0) || "F").toUpperCase();
       const live = chef.liveStreamId
         ? `<span style="position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:8px;font-weight:800;padding:1px 4px;border-radius:99px;">LIVE</span>`
         : "";
-      const letter = (chef.name.trim().charAt(0) || "F").toUpperCase();
-      const icon = L.divIcon({
-        className: "fw-marker",
-        html: `<div style="position:relative;width:${size}px;height:${size}px;background:#fffefb;border:${isSel ? 4 : 3}px solid ${ring};border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 ${isSel ? 20 : 18}px 'Helvetica Neue',Helvetica,Arial,sans-serif;letter-spacing:-0.03em;color:#171410;box-shadow:0 2px 10px rgba(23,20,16,.25);">${letter}${live}</div>`,
-        iconSize: [size, size],
-        iconAnchor: [size / 2, size / 2],
+      const html = `<div style="position:relative;transform:translate(-${size / 2}px,-${size / 2}px);width:${size}px;height:${size}px;background:#fffefb;border:${isSel ? 4 : 3}px solid ${ring};border-radius:50%;display:flex;align-items:center;justify-content:center;font:800 ${isSel ? 20 : 18}px 'Helvetica Neue',Helvetica,Arial,sans-serif;letter-spacing:-0.03em;color:#171410;box-shadow:0 2px 10px rgba(23,20,16,.25);">${letter}${live}</div>`;
+
+      const pm = new ymaps.Placemark(
+        [chef.lat, chef.lng],
+        {},
+        {
+          iconLayout: ymaps.templateLayoutFactory.createClass(html),
+          iconShape: { type: "Circle", coordinates: [0, 0], radius: size / 2 },
+          zIndexActive: 1000,
+          zIndex: isSel ? 999 : 1,
+        }
+      );
+      const id = chef.id;
+      pm.events.add("click", (e: any) => {
+        e.preventDefault();
+        onSelectRef.current(id);
       });
-      const marker = L.marker([chef.lat, chef.lng], { icon }).addTo(map);
-      marker.on("click", () => onSelect(chef.id));
-      markersRef.current.set(chef.id, marker);
+      coll.add(pm);
     }
-  }, [chefs, onSelect, selected]);
 
-  // Маршрут «вы → кухня повара», как линия поездки в такси
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map) return;
-    routeRef.current?.remove();
-    routeRef.current = null;
+    // Маршрут «вы → кухня повара»
+    const sel = chefs.find((c) => c.id === selected);
+    if (sel && sel.lat != null && sel.lng != null) {
+      coll.add(
+        new ymaps.Polyline(
+          [USER_POINT, [sel.lat, sel.lng]],
+          {},
+          { strokeColor: "#171410", strokeWidth: 3, strokeStyle: "dash", strokeOpacity: 0.85 }
+        )
+      );
+      const lats = [USER_POINT[0], sel.lat];
+      const lngs = [USER_POINT[1], sel.lng];
+      map.setBounds(
+        [
+          [Math.min(...lats), Math.min(...lngs)],
+          [Math.max(...lats), Math.max(...lngs)],
+        ],
+        { checkZoomRange: true, zoomMargin: 70, duration: 500 }
+      );
+    }
+  }, [ready, chefs, selected]);
 
-    const chef = chefs.find((c) => c.id === selected);
-    if (!chef || chef.lat == null || chef.lng == null) return;
-
-    const route = L.polyline([USER_POINT, [chef.lat, chef.lng]], {
-      color: "#171410",
-      weight: 3,
-      dashArray: "8 8",
-      opacity: 0.8,
-    }).addTo(map);
-    routeRef.current = route;
-    map.flyToBounds(route.getBounds(), { padding: [70, 70], maxZoom: 15, duration: 0.6 });
-  }, [selected, chefs]);
+  if (failed) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center gap-2 bg-stone-100 px-6 text-center">
+        <p className="text-sm font-semibold text-stone-600">Карта Яндекса не загрузилась</p>
+        <p className="max-w-xs text-xs text-stone-500">
+          Задайте ключ <code className="rounded bg-stone-200 px-1">NEXT_PUBLIC_YANDEX_MAPS_API_KEY</code> в файле{" "}
+          <code className="rounded bg-stone-200 px-1">.env.local</code>. Список поваров ниже работает и без карты.
+        </p>
+      </div>
+    );
+  }
 
   return <div ref={containerRef} className="h-full w-full" />;
 }
