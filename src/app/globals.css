@@ -123,11 +123,8 @@ body {
 }
 .msg-in { animation: msg-in 0.25s ease-out; }
 
-/* Карта Leaflet */
-.leaflet-container {
+/* Карта Яндекса: прячем стандартный блок copyright-логотипа поверх плиток */
+.ymaps-2-1-79-map,
+[class*="ymaps"][class*="-map"] {
   font: inherit;
-}
-.fw-marker {
-  background: transparent;
-  border: none;
 }
