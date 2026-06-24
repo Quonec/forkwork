@@ -2,6 +2,8 @@
 # Сборка идёт по Dockerfile из корня репозитория.
 meta:
   environment: docker
+  toolchain:
+    name: docker
 
 run:
   # Порт, который слушает приложение (next start → 3000).
