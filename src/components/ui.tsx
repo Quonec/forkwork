@@ -67,6 +67,22 @@ export function SectionTitle({
   );
 }
 
+/** Дружелюбный «тупик»: понятное сообщение и кнопки выхода, чтобы пользователь
+   никогда не застрял на странице без навигации (например, при нехватке прав). */
+export function Stranded({ title, hint }: { title: string; hint?: string }) {
+  return (
+    <div className="mx-auto max-w-md px-4 py-20 text-center">
+      <div className="mx-auto h-px w-10 bg-stone-300" />
+      <h1 className="mt-4 text-lg font-bold">{title}</h1>
+      {hint && <p className="mt-2 text-sm text-stone-500">{hint}</p>}
+      <div className="mt-5 flex flex-wrap justify-center gap-2">
+        <Link href="/" className="btn-secondary">На главную</Link>
+        <Link href="/login" className="btn-primary">Сменить аккаунт</Link>
+      </div>
+    </div>
+  );
+}
+
 export function Empty({ text, children }: { icon?: string; text: string; children?: ReactNode }) {
   return (
     <div className="card flex flex-col items-center gap-3 px-6 py-12 text-center">

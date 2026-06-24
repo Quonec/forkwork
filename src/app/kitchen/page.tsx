@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fmtFC, fmtDateTime, timeAgo } from "@/lib/format";
 import { StatusChip } from "@/components/StatusChip";
 import CameraStudio from "@/components/CameraStudio";
+import { Stranded } from "@/components/ui";
 import { ORDER_FLOW, ORDER_STATUS_RU, type CartItem } from "@/lib/types";
 
 type KitchenData = {
@@ -62,7 +63,7 @@ function Kitchen() {
     return res.ok;
   };
 
-  if (error) return <div className="py-24 text-center text-stone-500">{error} · <Link className="text-orange-600" href="/cabinet">в кабинет заказчика</Link></div>;
+  if (error) return <Stranded title={error} hint="Поварской кабинет доступен только пользователям с ролью «Повар»." />;
   if (!data) return <div className="py-24 text-center text-stone-400">Открываем кухню…</div>;
 
   const { stats, profile } = data;
