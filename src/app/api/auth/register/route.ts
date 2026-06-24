@@ -10,7 +10,7 @@ export async function POST(req: Request) {
   const email = String(body.email ?? "").trim().toLowerCase();
   const password = String(body.password ?? "");
   const name = String(body.name ?? "").trim();
-  const role = body.role === "chef" ? "chef" : "customer";
+  const role = body.role === "chef" ? "chef" : body.role === "manager" ? "manager" : "customer";
 
   if (!/^\S+@\S+\.\S+$/.test(email)) return err("Укажите корректный email");
   if (password.length < 6) return err("Пароль — минимум 6 символов");

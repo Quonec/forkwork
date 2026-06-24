@@ -7,7 +7,10 @@ import Link from "next/link";
 function RegisterForm() {
   const router = useRouter();
   const params = useSearchParams();
-  const [role, setRole] = useState<"customer" | "chef">(params.get("role") === "chef" ? "chef" : "customer");
+  const initialRole = params.get("role");
+  const [role, setRole] = useState<"customer" | "chef" | "manager">(
+    initialRole === "chef" ? "chef" : initialRole === "manager" ? "manager" : "customer"
+  );
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -36,7 +39,7 @@ function RegisterForm() {
       <h1 className="text-2xl font-extrabold">Регистрация</h1>
       <p className="mt-1 text-sm text-stone-500">Выберите роль — у каждой свой кабинет и сценарий работы.</p>
 
-      <div className="mt-6 grid grid-cols-2 gap-3">
+      <div className="mt-6 grid grid-cols-3 gap-3">
         <button
           onClick={() => setRole("customer")}
           className={`card p-4 text-left transition-all ${role === "customer" ? "ring-2 ring-orange-500" : "hover:ring-stone-300"}`}
@@ -52,6 +55,14 @@ function RegisterForm() {
           <div className="font-display text-xl font-bold text-orange-500">П</div>
           <p className="mt-2 font-bold">Повар</p>
           <p className="mt-0.5 text-xs text-stone-500">Готовлю, стримлю, продаю</p>
+        </button>
+        <button
+          onClick={() => setRole("manager")}
+          className={`card p-4 text-left transition-all ${role === "manager" ? "ring-2 ring-orange-500" : "hover:ring-stone-300"}`}
+        >
+          <div className="font-display text-xl font-bold text-orange-500">М</div>
+          <p className="mt-2 font-bold">Менеджер</p>
+          <p className="mt-0.5 text-xs text-stone-500">Курирую поваров и клиентов</p>
         </button>
       </div>
 

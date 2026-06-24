@@ -7,6 +7,7 @@ import Link from "next/link";
 const DEMO = [
   ["user@forkwork.ru", "user123", "Заказчик Аня"],
   ["chef@forkwork.ru", "chef123", "Повар Марко"],
+  ["manager@forkwork.ru", "manager123", "Менеджер Ольга"],
   ["admin@forkwork.ru", "admin123", "Администратор"],
 ];
 
@@ -28,7 +29,8 @@ export default function LoginPage() {
     const data = await res.json();
     setBusy(false);
     if (!res.ok) return setError(data.error ?? "Ошибка входа");
-    router.push(data.onboarded ? (data.role === "chef" ? "/kitchen" : data.role === "admin" ? "/admin" : "/map") : "/onboarding");
+    const home = data.role === "chef" ? "/kitchen" : data.role === "admin" ? "/admin" : data.role === "manager" ? "/manager" : "/map";
+    router.push(data.onboarded ? home : "/onboarding");
     router.refresh();
   };
 

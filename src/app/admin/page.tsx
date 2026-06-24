@@ -8,11 +8,15 @@ import { fmtFC, fmtDateTime } from "@/lib/format";
 const TABS = [
   ["stats", "Аналитика"],
   ["users", "Пользователи"],
+  ["managers", "Менеджеры"],
+  ["streams", "Стримы"],
   ["complaints", "Жалобы"],
   ["reviews", "Отзывы"],
   ["requests", "Заявки"],
   ["categories", "Категории"],
 ] as const;
+
+const ROLE_LABEL: Record<string, string> = { chef: "повар", admin: "админ", manager: "менеджер", customer: "заказчик" };
 
 type Totals = {
   totalUsers: number; totalChefs: number; totalOrders: number; gmv: number; fees: number; avgCheck: number;
@@ -87,7 +91,7 @@ function Admin() {
                 <p className="font-semibold">
                   {u.name}
                   <span className="ml-2 chip bg-stone-100 px-2 py-0.5 text-[10px] text-stone-500">
-                    {u.role === "chef" ? "повар" : u.role === "admin" ? "админ" : "заказчик"}
+                    {ROLE_LABEL[u.role] ?? u.role}
                   </span>
                   {!!u.blocked && <span className="ml-1 chip bg-red-50 px-2 py-0.5 text-[10px] text-red-600">заблокирован</span>}
                 </p>
@@ -175,6 +179,90 @@ function Admin() {
       )}
 
       {data && tab === "categories" && <CategoriesView categories={data.categories as { id: number; name: string; emoji: string; chefs: number }[]} act={act} />}
+
+      {data && tab === "managers" && (
+        <ManagersView
+          managers={data.managers as { id: number; name: string; email: string; controlCount: number; supportCount: number }[]}
+          chefs={data.chefs as { id: number; name: string; controlId: number | null; supportId: number | null }[]}
+          act={act}
+        />
+      )}
+
+      {data && tab === "streams" && (
+        <div className="mt-6 space-y-3">
+          {(data.streams as { id: number; title: string; status: string; viewers: number; chefName: string; startedAt: string | null; scheduledAt: string | null }[]).map((s) => (
+            <div key={s.id} className="card flex flex-wrap items-center gap-3 p-4">
+              <span className={`chip px-2 py-0.5 text-[10px] ${s.status === "live" ? "bg-red-600 text-white" : s.status === "scheduled" ? "bg-amber-100 text-amber-700" : "bg-stone-100 text-stone-500"}`}>
+                {s.status === "live" ? "LIVE" : s.status === "scheduled" ? "ПЛАН" : "АРХИВ"}
+              </span>
+              <div className="min-w-0 flex-1">
+                <Link href={`/streams/${s.id}`} className="font-bold hover:text-orange-600">{s.title}</Link>
+                <p className="text-xs text-stone-400">
+                  {s.chefName} · {s.status === "live" ? `${s.viewers} зрит.` : s.status === "scheduled" ? `план: ${s.scheduledAt ? fmtDateTime(s.scheduledAt) : "—"}` : "завершён"}
+                </p>
+              </div>
+              {s.status === "live" && (
+                <button onClick={() => confirm("Остановить эфир?") && act({ action: "stream_stop", id: s.id }, "Эфир остановлен")} className="btn-danger !py-1.5 text-xs">Остановить</button>
+              )}
+            </div>
+          ))}
+          {(data.streams as unknown[]).length === 0 && <p className="text-sm text-stone-500">Стримов нет.</p>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function ManagersView({
+  managers,
+  chefs,
+  act,
+}: {
+  managers: { id: number; name: string; email: string; controlCount: number; supportCount: number }[];
+  chefs: { id: number; name: string; controlId: number | null; supportId: number | null }[];
+  act: (b: Record<string, unknown>, n?: string) => void;
+}) {
+  return (
+    <div className="mt-6 grid gap-4 lg:grid-cols-[260px_1fr]">
+      <div className="card h-fit p-5">
+        <h3 className="font-bold">Менеджеры</h3>
+        {managers.length === 0 ? (
+          <p className="mt-2 text-sm text-stone-500">Менеджеров нет. Зарегистрируйте роль «Менеджер».</p>
+        ) : (
+          <div className="mt-3 space-y-2">
+            {managers.map((m) => (
+              <div key={m.id} className="rounded-xl bg-stone-50 px-3 py-2">
+                <p className="text-sm font-semibold">{m.name}</p>
+                <p className="text-[11px] text-stone-400">контроль: {m.controlCount} · поддержка: {m.supportCount}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      <div className="card overflow-hidden">
+        <p className="px-4 pt-4 text-xs font-bold uppercase tracking-wide text-stone-400">Закрепление поваров</p>
+        <div className="mt-2 divide-y divide-stone-100">
+          {chefs.map((c) => (
+            <div key={c.id} className="flex flex-wrap items-center gap-3 px-4 py-3">
+              <p className="min-w-0 flex-1 font-semibold">{c.name}</p>
+              <label className="flex items-center gap-1.5 text-xs text-stone-500">
+                Контроль
+                <select className="input !w-auto !py-1.5 text-sm" value={c.controlId ?? ""} onChange={(e) => act({ action: "manager_assign", chefId: c.id, kind: "control", managerId: Number(e.target.value) }, "Назначение обновлено")}>
+                  <option value="">—</option>
+                  {managers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </label>
+              <label className="flex items-center gap-1.5 text-xs text-stone-500">
+                Поддержка
+                <select className="input !w-auto !py-1.5 text-sm" value={c.supportId ?? ""} onChange={(e) => act({ action: "manager_assign", chefId: c.id, kind: "support", managerId: Number(e.target.value) }, "Назначение обновлено")}>
+                  <option value="">—</option>
+                  {managers.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                </select>
+              </label>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
