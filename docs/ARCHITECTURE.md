@@ -3,6 +3,20 @@
 Диаграммы в нотации **Mermaid** (рендерятся прямо на GitHub) и **BPMN-приближении**.
 Источник истины — код в `src/` (роуты `app/api/*`, схема `lib/db.ts`, статусы `lib/types.ts`).
 
+## Презентационные диаграммы (для слайдов и питча)
+
+Готовые векторные (`.svg`) и растровые 2× (`.png`) изображения в фирменном стиле — вставляются прямо в PowerPoint / Keynote / Google Slides.
+
+**Карта вкладок по ролям** — [SVG](diagrams/tab-map.svg) · [PNG](diagrams/tab-map.png)
+
+![Карта вкладок ForkWork](diagrams/tab-map.png)
+
+**Навигация и пользовательские пути** — [SVG](diagrams/app-map.svg) · [PNG](diagrams/app-map.png)
+
+![Навигация ForkWork](diagrams/app-map.png)
+
+---
+
 **Условные обозначения для процессов (BPMN-приближение):**
 
 | Фигура | Mermaid | Значение |
