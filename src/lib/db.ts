@@ -482,6 +482,40 @@ function seed(db: DatabaseSync) {
   }
 }
 
+// Идемпотентная миграция: гарантирует наличие менеджеров и их назначений даже
+// в БД, созданных до появления роли (там seed уже не запускается). Безопасна
+// при повторных и параллельных вызовах: уникальные индексы + INSERT OR IGNORE.
+function ensureManagers(db: DatabaseSync) {
+  const t = nowIso();
+  const ensureUser = (email: string, name: string): number => {
+    db.prepare(
+      "INSERT OR IGNORE INTO users (email, pass_hash, name, role, avatar, onboarded, created_at) VALUES (?,?,?,?,?,1,?)"
+    ).run(email, hashSync("manager123", 8), name, "manager", "", t);
+    const row = db.prepare("SELECT id FROM users WHERE email = ?").get(email) as { id: number };
+    db.prepare("INSERT OR IGNORE INTO wallets (user_id, balance) VALUES (?, 0)").run(row.id);
+    return row.id;
+  };
+  const olga = ensureUser("manager@forkwork.ru", "Ольга Корнеева");
+  const pavel = ensureUser("manager2@forkwork.ru", "Павел Сухой");
+
+  const have = (db.prepare("SELECT COUNT(*) AS n FROM manager_assignments").get() as { n: number }).n;
+  if (have > 0) return; // назначения уже расставлены — не трогаем
+
+  const chefByEmail = (email: string): number | undefined =>
+    (db.prepare("SELECT c.id AS id FROM chefs c JOIN users u ON u.id = c.user_id WHERE u.email = ?").get(email) as
+      | { id: number }
+      | undefined)?.id;
+  const ins = db.prepare("INSERT OR IGNORE INTO manager_assignments (manager_id, chef_id, kind, created_at) VALUES (?,?,?,?)");
+  const a = (mid: number, email: string, kind: "control" | "support" = "control") => {
+    const cid = chefByEmail(email);
+    if (cid) ins.run(mid, cid, kind, t);
+  };
+  ["chef@forkwork.ru", "timur@forkwork.ru", "nino@forkwork.ru", "haru@forkwork.ru"].forEach((e) => a(olga, e));
+  ["polina@forkwork.ru", "ayse@forkwork.ru", "grisha@forkwork.ru", "sofia@forkwork.ru"].forEach((e) => a(pavel, e));
+  a(olga, "polina@forkwork.ru", "support");
+  a(pavel, "chef@forkwork.ru", "support");
+}
+
 const sleepSync = (ms: number) => {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 };
@@ -499,6 +533,7 @@ function open(): DatabaseSync {
       db.exec("BEGIN IMMEDIATE");
       const row = db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number };
       if (row.n === 0) seed(db);
+      ensureManagers(db); // догоняем существующие БД, созданные до роли «Менеджер»
       db.exec("COMMIT");
       break;
     } catch (e) {
