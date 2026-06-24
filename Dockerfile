@@ -22,6 +22,9 @@ ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=${NEXT_PUBLIC_YANDEX_MAPS_API_KEY}
 COPY package*.json ./
 RUN npm ci
 COPY . .
+# В проекте может не быть папки public/ (статика App Router живёт в src/app).
+# Создаём её, чтобы COPY в рантайм-стадию всегда находил путь.
+RUN mkdir -p public
 RUN npm run build
 
 # ── Стадия 2: рантайм (только прод-зависимости) ────────────────
