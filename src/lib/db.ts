@@ -170,6 +170,14 @@ CREATE TABLE IF NOT EXISTS events (
   meta TEXT NOT NULL DEFAULT '',
   created_at TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS manager_assignments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  manager_id INTEGER NOT NULL,
+  chef_id INTEGER NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'control',
+  created_at TEXT NOT NULL,
+  UNIQUE(chef_id, kind)
+);
 `;
 
 export const nowIso = () => new Date().toISOString();
@@ -213,6 +221,10 @@ function seed(db: DatabaseSync) {
   const lenaId = user("lena@forkwork.ru", "user123", "Лена Маркова", "customer", "", 15);
   const denisId = user("denis@forkwork.ru", "user123", "Денис Чащин", "customer", "", 10);
 
+  // --- менеджеры (кураторы поваров) ---
+  const olgaId = user("manager@forkwork.ru", "manager123", "Ольга Корнеева", "manager", "", 85);
+  const pavelId = user("manager2@forkwork.ru", "manager123", "Павел Сухой", "manager", "", 60);
+
   // --- повара ---
   const insChef = db.prepare(
     "INSERT INTO chefs (user_id, bio, specialization, cuisine_id, lat, lng, address, price_level, available, delivery, pickup, work_hours) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)"
@@ -229,6 +241,17 @@ function seed(db: DatabaseSync) {
   const ayse = chef(ayseU, "Стамбульский стритфуд: кебабы на углях, пиде, баклава по рецепту бабушки Фатмы.", "Кебаб и пиде", "Турецкая", 55.7699, 37.6351, "Мясницкая, 30", 1, 0, 1, 1, "11:00–23:00");
   const grisha = chef(grishaU, "Пекарь-кондитер. Круассаны на французском масле, медовик, который заказывают за неделю.", "Круассаны и торты", "Выпечка и десерты", 55.7448, 37.5672, "Арбат, 51", 2, 1, 0, 1, "08:00–20:00");
   const sofia = chef(sofiaU, "Корейская домашняя кухня: кимчи собственной закваски, рамён, токпокки и кимпаб.", "Кимчи и рамён", "Корейская", 55.7282, 37.6405, "Люсиновская, 14", 1, 1, 1, 1, "10:00–22:00");
+
+  // --- назначения менеджеров: контроль (control) и поддержка (support) ---
+  const insAssign = db.prepare("INSERT INTO manager_assignments (manager_id, chef_id, kind, created_at) VALUES (?,?,?,?)");
+  const assign = (mid: number, cid: number, kind: "control" | "support" = "control") => insAssign.run(mid, cid, kind, t);
+  // Ольга курирует «итальяно-кавказско-азиатский» куст
+  [marco, timur, nino, haru].forEach((c) => assign(olgaId, c, "control"));
+  // Павел курирует «веган-восток-десерты» куст
+  [polina, ayse, grisha, sofia].forEach((c) => assign(pavelId, c, "control"));
+  // перекрёстная поддержка, чтобы показать второй тип прав
+  assign(olgaId, polina, "support");
+  assign(pavelId, marco, "support");
 
   // --- блюда ---
   const insDish = db.prepare(
@@ -390,6 +413,8 @@ function seed(db: DatabaseSync) {
   // --- кошельки ---
   const insWallet = db.prepare("INSERT INTO wallets (user_id, balance) VALUES (?,?)");
   insWallet.run(adminId, 0);
+  insWallet.run(olgaId, 0);
+  insWallet.run(pavelId, 0);
   insWallet.run(anyaId, 5000);
   insWallet.run(kirillId, 2300);
   insWallet.run(lenaId, 800);

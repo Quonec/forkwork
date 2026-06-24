@@ -19,6 +19,13 @@ const CHEF_STEPS: Step[] = [
   { title: "Правила платформы", text: "Личные чаты открываются только с вашего согласия. Комиссия платформы — 10% с заказа. Соблюдайте санитарные нормы и правила общения." },
 ];
 
+const MANAGER_STEPS: Step[] = [
+  { title: "Кабинет менеджера", text: "Вы курируете закреплённых поваров и их клиентов. На обзоре — портфель: обороты, рейтинги, активные эфиры и точки внимания." },
+  { title: "Глубокая аналитика", text: "По каждому повару видны выручка, заказы, баланс, рейтинг и последняя активность; по клиентам — суммы, частота и любимые повара." },
+  { title: "Быстрые инструменты", text: "Прямо из списка: включить приём заказов, закрепить промо в эфире, остановить стрим, начислить маркетинг-бонус, разобрать жалобу." },
+  { title: "Передача прав", text: "Контроль и поддержку над поваром можно передать другому менеджеру в один клик — например, на время вашего отпуска." },
+];
+
 export default function OnboardingPage() {
   const router = useRouter();
   const [role, setRole] = useState<string | null>(null);
@@ -35,20 +42,20 @@ export default function OnboardingPage() {
 
   if (!role) return <div className="py-24 text-center text-stone-400">Загрузка…</div>;
 
-  const steps = role === "chef" ? CHEF_STEPS : CUSTOMER_STEPS;
+  const steps = role === "chef" ? CHEF_STEPS : role === "manager" ? MANAGER_STEPS : CUSTOMER_STEPS;
   const current = steps[step];
   const isLast = step === steps.length - 1;
 
   const finish = async () => {
     await fetch("/api/onboarding", { method: "POST" });
-    router.push(role === "chef" ? "/kitchen" : "/map");
+    router.push(role === "chef" ? "/kitchen" : role === "manager" ? "/manager" : "/map");
     router.refresh();
   };
 
   return (
     <div className="mx-auto max-w-lg px-4 py-16">
       <p className="text-center text-xs font-bold uppercase tracking-widest text-orange-500">
-        Первичный инструктаж · {role === "chef" ? "повар" : "заказчик"}
+        Первичный инструктаж · {role === "chef" ? "повар" : role === "manager" ? "менеджер" : "заказчик"}
       </p>
       <div className="card mt-4 p-8 text-center">
         <div className="font-display text-5xl font-bold text-orange-300">{String(step + 1).padStart(2, "0")}</div>

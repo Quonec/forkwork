@@ -1,6 +1,13 @@
 // Общие типы ForkWork
 
-export type Role = "customer" | "chef" | "admin";
+export type Role = "customer" | "chef" | "admin" | "manager";
+
+export const ROLE_RU: Record<Role, string> = {
+  customer: "Заказчик",
+  chef: "Повар",
+  admin: "Администратор",
+  manager: "Менеджер",
+};
 
 export type SessionUser = {
   id: number;

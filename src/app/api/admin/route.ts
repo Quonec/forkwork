@@ -130,6 +130,44 @@ export async function GET(req: Request) {
     return json({ categories });
   }
 
+  if (view === "managers") {
+    const managers = plainAll(
+      db
+        .prepare(
+          `SELECT u.id, u.name, u.email,
+            (SELECT COUNT(*) FROM manager_assignments ma WHERE ma.manager_id=u.id AND ma.kind='control') AS controlCount,
+            (SELECT COUNT(*) FROM manager_assignments ma WHERE ma.manager_id=u.id AND ma.kind='support') AS supportCount
+           FROM users u WHERE u.role='manager' ORDER BY u.name`
+        )
+        .all()
+    );
+    const chefs = plainAll(
+      db
+        .prepare(
+          `SELECT c.id, u.name,
+            (SELECT manager_id FROM manager_assignments ma WHERE ma.chef_id=c.id AND ma.kind='control') AS controlId,
+            (SELECT manager_id FROM manager_assignments ma WHERE ma.chef_id=c.id AND ma.kind='support') AS supportId
+           FROM chefs c JOIN users u ON u.id=c.user_id ORDER BY u.name`
+        )
+        .all()
+    );
+    return json({ managers, chefs });
+  }
+
+  if (view === "streams") {
+    const streams = plainAll(
+      db
+        .prepare(
+          `SELECT s.id, s.title, s.status, s.viewers, s.started_at AS startedAt, s.scheduled_at AS scheduledAt,
+            u.name AS chefName
+           FROM streams s JOIN chefs c ON c.id=s.chef_id JOIN users u ON u.id=c.user_id
+           ORDER BY s.status='live' DESC, s.id DESC`
+        )
+        .all()
+    );
+    return json({ streams });
+  }
+
   return err("Неизвестный раздел");
 }
 
@@ -190,6 +228,21 @@ export async function POST(req: Request) {
       db.prepare("UPDATE chefs SET cuisine_id = NULL WHERE cuisine_id = ?").run(id);
       db.prepare("DELETE FROM cuisines WHERE id = ?").run(id);
       return json({ ok: true });
+    case "manager_assign": {
+      const chefId = Number(body.chefId);
+      const kind = body.kind === "support" ? "support" : "control";
+      const managerId = Number(body.managerId);
+      if (!managerId) {
+        db.prepare("DELETE FROM manager_assignments WHERE chef_id=? AND kind=?").run(chefId, kind);
+        return json({ ok: true });
+      }
+      if (!db.prepare("SELECT 1 FROM users WHERE id=? AND role='manager'").get(managerId)) return err("Это не менеджер");
+      db.prepare(
+        `INSERT INTO manager_assignments (manager_id, chef_id, kind, created_at) VALUES (?,?,?,?)
+         ON CONFLICT(chef_id, kind) DO UPDATE SET manager_id=excluded.manager_id, created_at=excluded.created_at`
+      ).run(managerId, chefId, kind, t);
+      return json({ ok: true });
+    }
     default:
       return err("Неизвестное действие");
   }

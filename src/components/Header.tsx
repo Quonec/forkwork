@@ -65,11 +65,12 @@ export default async function Header() {
                 <div className="border-b border-stone-100 px-3 py-2">
                   <p className="truncate text-sm font-semibold">{user.name}</p>
                   <p className="text-xs text-stone-500">
-                    {user.role === "chef" ? "Повар" : user.role === "admin" ? "Администратор" : "Заказчик"}
+                    {user.role === "chef" ? "Повар" : user.role === "admin" ? "Администратор" : user.role === "manager" ? "Менеджер" : "Заказчик"}
                   </p>
                 </div>
                 <MenuLink href="/cabinet" label="Мой кабинет" />
                 {user.role === "chef" && <MenuLink href="/kitchen" label="Поварской кабинет" />}
+                {user.role === "manager" && <MenuLink href="/manager" label="Кабинет менеджера" />}
                 {user.role === "admin" && <MenuLink href="/admin" label="Админ-панель" />}
                 <MenuLink href="/chats" label="Личные чаты" />
                 <a href="/api/auth/logout" className="block rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50">
