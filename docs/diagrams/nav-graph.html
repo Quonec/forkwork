@@ -1,0 +1,51 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>ForkWork — граф навигации</title>
+<style>
+  html,body{margin:0;height:100%;background:#17150f;overflow:hidden;font-family:'Segoe UI',system-ui,sans-serif}
+  #hud{position:fixed;left:16px;top:14px;color:#e9e1cf;z-index:5;pointer-events:none}
+  #hud h1{margin:0;font-size:18px} #hud p{margin:4px 0 0;font-size:12px;color:#9c937f}
+  #legend{position:fixed;right:16px;top:14px;color:#cfc6b2;font-size:12px;z-index:5;text-align:right}
+  .dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-left:10px;vertical-align:middle}
+  text{user-select:none;pointer-events:none}
+  svg{width:100vw;height:100vh;cursor:grab} svg.drag{cursor:grabbing}
+  #fw{position:fixed;left:16px;bottom:14px;color:#6f6452;font-size:11px;z-index:5}
+</style></head><body>
+<div id="hud"><h1>Граф навигации ForkWork</h1><p>Перетаскивайте узлы · колесо — зум · фон — панорама · наведение — соседи</p></div>
+<div id="legend"></div>
+<div id="fw">как в Obsidian · offline</div>
+<svg id="g"><g id="view"><g id="links"></g><g id="nodes"></g></g></svg>
+<script>
+const D={"nodes":[{"id":"home","label":"Лендинг","group":"content","r":14.328265125462805},{"id":"map","label":"Карта","group":"content","r":12.8},{"id":"streams","label":"Стримы","group":"content","r":11.888972745734183},{"id":"chefs","label":"Повара","group":"content","r":11.888972745734183},{"id":"recipes","label":"Рецепты","group":"content","r":11.888972745734183},{"id":"recipe","label":"Рецепт","group":"content","r":11.888972745734183},{"id":"chef","label":"Профиль повара","group":"flow","r":14.995554457619608},{"id":"room","label":"Эфир","group":"flow","r":15.616652224137047},{"id":"cart","label":"Корзина","group":"flow","r":11.888972745734183},{"id":"order","label":"Заказ","group":"flow","r":11.888972745734183},{"id":"chatsList","label":"Чаты","group":"content","r":12.8},{"id":"chat","label":"Личный чат","group":"flow","r":12.8},{"id":"login","label":"Вход","group":"content","r":10.808326112068524},{"id":"register","label":"Регистрация","group":"content","r":10.808326112068524},{"id":"onb","label":"Онбординг","group":"content","r":14.995554457619608},{"id":"cabinet","label":"Кабинет","group":"cabinet","r":16.75174404457249},{"id":"kitchen","label":"Кухня","group":"kitchen","r":17.27652428720836},{"id":"manager","label":"Менеджер","group":"manager","r":14.995554457619608},{"id":"admin","label":"Админ","group":"admin","r":17.27652428720836},{"id":"cabinet:0","label":"Обзор","group":"cabinet","r":9.4},{"id":"cabinet:1","label":"Заказы","group":"cabinet","r":10.808326112068524},{"id":"cabinet:2","label":"Избранное","group":"cabinet","r":9.4},{"id":"cabinet:3","label":"Кошелёк","group":"cabinet","r":9.4},{"id":"cabinet:4","label":"Стать поваром","group":"cabinet","r":10.808326112068524},{"id":"kitchen:0","label":"Обзор","group":"kitchen","r":9.4},{"id":"kitchen:1","label":"Заказы","group":"kitchen","r":10.808326112068524},{"id":"kitchen:2","label":"Блюда","group":"kitchen","r":9.4},{"id":"kitchen:3","label":"Рецепты","group":"kitchen","r":10.808326112068524},{"id":"kitchen:4","label":"Стримы·Студия","group":"kitchen","r":10.808326112068524},{"id":"kitchen:5","label":"Чаты","group":"kitchen","r":10.808326112068524},{"id":"kitchen:6","label":"Отзывы","group":"kitchen","r":9.4},{"id":"kitchen:7","label":"Профиль","group":"kitchen","r":9.4},{"id":"kitchen:8","label":"Финансы","group":"kitchen","r":9.4},{"id":"manager:0","label":"Обзор","group":"manager","r":9.4},{"id":"manager:1","label":"Мои повара","group":"manager","r":11.888972745734183},{"id":"manager:2","label":"Клиенты","group":"manager","r":9.4},{"id":"manager:3","label":"Передача прав","group":"manager","r":9.4},{"id":"admin:0","label":"Аналитика","group":"admin","r":9.4},{"id":"admin:1","label":"Пользователи","group":"admin","r":9.4},{"id":"admin:2","label":"Менеджеры","group":"admin","r":9.4},{"id":"admin:3","label":"Стримы","group":"admin","r":10.808326112068524},{"id":"admin:4","label":"Жалобы","group":"admin","r":9.4},{"id":"admin:5","label":"Отзывы","group":"admin","r":9.4},{"id":"admin:6","label":"Заявки","group":"admin","r":9.4},{"id":"admin:7","label":"Категории","group":"admin","r":9.4}],"links":[["cabinet","cabinet:0"],["cabinet","cabinet:1"],["cabinet","cabinet:2"],["cabinet","cabinet:3"],["cabinet","cabinet:4"],["kitchen","kitchen:0"],["kitchen","kitchen:1"],["kitchen","kitchen:2"],["kitchen","kitchen:3"],["kitchen","kitchen:4"],["kitchen","kitchen:5"],["kitchen","kitchen:6"],["kitchen","kitchen:7"],["kitchen","kitchen:8"],["manager","manager:0"],["manager","manager:1"],["manager","manager:2"],["manager","manager:3"],["admin","admin:0"],["admin","admin:1"],["admin","admin:2"],["admin","admin:3"],["admin","admin:4"],["admin","admin:5"],["admin","admin:6"],["admin","admin:7"],["home","map"],["home","streams"],["home","chefs"],["home","recipes"],["home","login"],["home","register"],["map","streams"],["chefs","recipes"],["map","chef"],["map","room"],["streams","room"],["chefs","chef"],["recipes","recipe"],["recipe","chef"],["chef","cart"],["chef","chat"],["chef","room"],["room","cart"],["room","chat"],["cart","order"],["login","onb"],["register","onb"],["onb","cabinet"],["onb","kitchen"],["onb","manager"],["onb","admin"],["chatsList","chat"],["cabinet:1","order"],["cabinet:4","onb"],["cabinet","chatsList"],["kitchen:1","order"],["kitchen:4","room"],["kitchen:5","chat"],["kitchen:3","recipe"],["manager:1","chef"],["manager:1","room"],["manager","chatsList"],["admin:3","room"],["admin","chatsList"],["cabinet","kitchen"],["cabinet","manager"],["cabinet","admin"]],"colors":{"bg":"#17150f","content":"#d9cdb0","flow":"#f0a64a","cabinet":"#34d399","kitchen":"#fcd000","manager":"#8b93ff","admin":"#f87171","hub":"#fff7df"}};const C=D.colors;
+const NS="http://www.w3.org/2000/svg";
+const svg=document.getElementById("g"),view=document.getElementById("view"),gl=document.getElementById("links"),gn=document.getElementById("nodes");
+document.getElementById("legend").innerHTML=[["Контент","content"],["Сценарии","flow"],["Заказчик","cabinet"],["Повар","kitchen"],["Менеджер","manager"],["Админ","admin"]].map(([t,g])=>t+'<span class="dot" style="background:'+C[g]+'"></span>').join("<br>");
+const idx=Object.fromEntries(D.nodes.map((n,i)=>[n.id,i]));
+const P=D.nodes.map((n,i)=>({x:Math.cos(i)*260+(Math.random()-.5)*60,y:Math.sin(i*1.7)*200+(Math.random()-.5)*60,vx:0,vy:0,fixed:false}));
+const adj={};D.nodes.forEach(n=>adj[n.id]=new Set());D.links.forEach(([a,b])=>{adj[a].add(b);adj[b].add(a);});
+// элементы
+const lineEls=D.links.map(()=>{const l=document.createElementNS(NS,"line");l.setAttribute("stroke","#fff");l.setAttribute("stroke-opacity","0.10");l.setAttribute("stroke-width","1.4");gl.appendChild(l);return l;});
+const nodeEls=D.nodes.map((n,i)=>{const g=document.createElementNS(NS,"g");const c=document.createElementNS(NS,"circle");c.setAttribute("r",n.r);c.setAttribute("fill",C[n.group]);c.setAttribute("stroke",C.bg);c.setAttribute("stroke-width","2");const t=document.createElementNS(NS,"text");t.setAttribute("font-size","12");t.setAttribute("fill","#e9e1cf");t.setAttribute("text-anchor","middle");t.setAttribute("y",n.r+13);t.setAttribute("paint-order","stroke");t.setAttribute("stroke",C.bg);t.setAttribute("stroke-width","3");t.textContent=n.label;g.appendChild(c);g.appendChild(t);g.style.cursor="pointer";gn.appendChild(g);
+  g.addEventListener("pointerenter",()=>highlight(n.id));g.addEventListener("pointerleave",()=>highlight(null));
+  g.addEventListener("pointerdown",ev=>{ev.stopPropagation();drag={i,id:n.id};P[i].fixed=true;svg.classList.add("drag");g.setPointerCapture(ev.pointerId);});
+  return {g,c,t};});
+function highlight(id){D.nodes.forEach((n,i)=>{const on=!id||n.id===id||adj[id].has(n.id);nodeEls[i].g.style.opacity=on?1:0.18;});D.links.forEach(([a,b],i)=>{const on=!id||a===id||b===id;lineEls[i].setAttribute("stroke-opacity",on?(id?0.5:0.10):0.04);lineEls[i].setAttribute("stroke",on&&id?C.kitchen:"#fff");});}
+// зум/пан
+let scale=1,ox=innerWidth/2,oy=innerHeight/2;
+function applyView(){view.setAttribute("transform","translate("+ox+","+oy+") scale("+scale+")");}
+applyView();
+svg.addEventListener("wheel",e=>{e.preventDefault();const f=e.deltaY<0?1.1:1/1.1;const mx=e.clientX,my=e.clientY;ox=mx-(mx-ox)*f;oy=my-(my-oy)*f;scale*=f;applyView();},{passive:false});
+let pan=null,drag=null;
+svg.addEventListener("pointerdown",e=>{pan={x:e.clientX,y:e.clientY,ox,oy};svg.classList.add("drag");});
+addEventListener("pointermove",e=>{if(drag){const p=P[drag.i];p.x=(e.clientX-ox)/scale;p.y=(e.clientY-oy)/scale;p.vx=p.vy=0;}else if(pan){ox=pan.ox+(e.clientX-pan.x);oy=pan.oy+(e.clientY-pan.y);applyView();}});
+addEventListener("pointerup",()=>{if(drag){P[drag.i].fixed=false;}drag=null;pan=null;svg.classList.remove("drag");});
+// сила
+const REP=11000,L0=104,K=0.05,CEN=0.007,DAMP=0.85;
+function step(){
+  for(let i=0;i<P.length;i++){let fx=-P[i].x*CEN,fy=-P[i].y*CEN;for(let j=0;j<P.length;j++){if(i===j)continue;let dx=P[i].x-P[j].x,dy=P[i].y-P[j].y,d2=dx*dx+dy*dy||0.01,d=Math.sqrt(d2),f=REP/d2;fx+=dx/d*f;fy+=dy/d*f;}P[i].fx=fx;P[i].fy=fy;}
+  D.links.forEach(([a,b])=>{const A=P[idx[a]],B=P[idx[b]];let dx=B.x-A.x,dy=B.y-A.y,d=Math.hypot(dx,dy)||0.01,f=(d-L0)*K,ux=dx/d,uy=dy/d;A.fx+=ux*f;A.fy+=uy*f;B.fx-=ux*f;B.fy-=uy*f;});
+  for(let i=0;i<P.length;i++){if(P[i].fixed)continue;P[i].vx=(P[i].vx+P[i].fx)*DAMP;P[i].vy=(P[i].vy+P[i].fy)*DAMP;const s=Math.hypot(P[i].vx,P[i].vy);if(s>18){P[i].vx*=18/s;P[i].vy*=18/s;}P[i].x+=P[i].vx;P[i].y+=P[i].vy;}
+}
+function render(){D.links.forEach(([a,b],i)=>{const A=P[idx[a]],B=P[idx[b]];lineEls[i].setAttribute("x1",A.x);lineEls[i].setAttribute("y1",A.y);lineEls[i].setAttribute("x2",B.x);lineEls[i].setAttribute("y2",B.y);});nodeEls.forEach((e,i)=>e.g.setAttribute("transform","translate("+P[i].x+","+P[i].y+")"));}
+function tick(){for(let k=0;k<2;k++)step();render();requestAnimationFrame(tick);}
+tick();
+</script></body></html>
