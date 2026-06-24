@@ -5,6 +5,7 @@ import Link from "next/link";
 import type { OrderRow } from "@/lib/types";
 import { ORDER_STATUS_RU, ORDER_FLOW } from "@/lib/types";
 import { fmtFC, fmtDateTime } from "@/lib/format";
+import { Stranded } from "@/components/ui";
 
 const STEP_NUM: Record<string, string> = { new: "1", accepted: "2", cooking: "3", delivering: "4", done: "5" };
 
@@ -54,7 +55,7 @@ export default function OrderPage({ params }: { params: Promise<{ id: string }> 
     load();
   };
 
-  if (error) return <div className="py-24 text-center text-stone-500">{error}</div>;
+  if (error) return <Stranded title={error} hint="Возможно, заказ не найден или у вас нет к нему доступа." />;
   if (!order) return <div className="py-24 text-center text-stone-400">Загружаем заказ…</div>;
 
   const stepIdx = ORDER_FLOW.indexOf(order.status);

@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState, use } from "react";
 import Link from "next/link";
+import { Stranded } from "@/components/ui";
 
 type ChatInfo = {
   id: number;
@@ -66,7 +67,7 @@ export default function ChatPage({ params }: { params: Promise<{ id: string }> }
     load();
   };
 
-  if (error && !chat) return <div className="py-24 text-center text-stone-500">{error}</div>;
+  if (error && !chat) return <Stranded title={error} hint="Возможно, чат не найден или у вас нет к нему доступа." />;
   if (!chat) return <div className="py-24 text-center text-stone-400">Загружаем чат…</div>;
 
   const iAmChef = me === chat.chefUserId;

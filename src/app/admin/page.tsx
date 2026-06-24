@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { fmtFC, fmtDateTime } from "@/lib/format";
+import { Stranded } from "@/components/ui";
 
 const TABS = [
   ["stats", "Аналитика"],
@@ -56,7 +57,7 @@ function Admin() {
     load();
   };
 
-  if (error) return <div className="py-24 text-center text-stone-500">{error}</div>;
+  if (error) return <Stranded title={error} hint="Админ-панель доступна только администратору платформы." />;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">

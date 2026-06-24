@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { fmtFC, fmtDateTime, timeAgo } from "@/lib/format";
+import { Stranded } from "@/components/ui";
 
 const TABS = [
   ["overview", "Обзор"],
@@ -68,7 +69,7 @@ function Manager() {
     load();
   };
 
-  if (error) return <div className="py-24 text-center text-stone-500">{error}</div>;
+  if (error) return <Stranded title={error} hint="Кабинет менеджера доступен только пользователям с ролью «Менеджер»." />;
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
