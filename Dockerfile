@@ -16,7 +16,7 @@ ENV NEXT_TELEMETRY_DISABLED=1
 #   docker build --build-arg NEXT_PUBLIC_YANDEX_MAPS_API_KEY=xxxx .
 # либо впишите значение по умолчанию прямо здесь. Без ключа карта
 # покажет подсказку, остальная логика работает.
-ARG NEXT_PUBLIC_YANDEX_MAPS_API_KEY=
+ARG NEXT_PUBLIC_YANDEX_MAPS_API_KEY=key-414f6ec4-fde0-48c6-9a08-6d7e8100ccff
 ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=${NEXT_PUBLIC_YANDEX_MAPS_API_KEY}
 
 COPY package*.json ./
