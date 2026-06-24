@@ -2,6 +2,9 @@
   "name": "forkwork",
   "version": "0.7.2",
   "private": true,
+  "engines": {
+    "node": ">=22.5"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",

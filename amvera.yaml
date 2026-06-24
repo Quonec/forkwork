@@ -1,0 +1,12 @@
+# Конфигурация деплоя для Amvera Cloud.
+# Сборка идёт по Dockerfile из корня репозитория.
+meta:
+  environment: docker
+
+run:
+  # Порт, который слушает приложение (next start → 3000).
+  containerPort: 3000
+  # Постоянный том монтируется сюда — ровно туда, куда node:sqlite
+  # пишет файл forkwork.db (process.cwd()/data == /app/data).
+  # Без этого БД обнулялась бы при каждом перезапуске контейнера.
+  persistenceMount: /app/data

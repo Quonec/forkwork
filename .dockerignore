@@ -1,0 +1,24 @@
+# зависимости и артефакты сборки — пересобираются внутри образа
+node_modules
+.next
+out
+
+# локальная БД и секреты НЕ должны попадать в образ
+data
+.env
+.env.local
+.env.*.local
+
+# git и редактор
+.git
+.gitignore
+.vscode
+.idea
+
+# тяжёлые материалы презентации (не нужны в рантайме)
+docs/diagrams/*.png
+
+# логи и мусор
+*.log
+npm-debug.log*
+.DS_Store
