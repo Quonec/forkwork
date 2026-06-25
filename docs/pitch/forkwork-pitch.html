@@ -1,0 +1,573 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>ForkWork — инвестиционный питч</title>
+<style>
+  :root{
+    --ink:#171410; --ink2:#0d0b08; --cream:#faf6ec; --paper:#fffefb;
+    --yellow:#fcd000; --yellow2:#ffe566; --ochre:#d09c2e; --amber:#d4a534;
+    --muted:#9c8c6c; --muted2:#7c6e54; --line:#ecdfc4; --line2:#ddcca7;
+    --red:#e5484d; --green:#2fa36b;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:#0a0907; overflow:hidden;
+    font-family:"Helvetica Neue",Helvetica,Arial,ui-sans-serif,system-ui,"Segoe UI",Roboto,sans-serif;
+    -webkit-font-smoothing:antialiased; letter-spacing:-0.011em; color:var(--ink);
+  }
+  .stage{position:fixed; inset:0; display:flex; align-items:center; justify-content:center; overflow:hidden}
+  .canvas{width:1280px; height:720px; position:relative; flex:none; transform-origin:center center}
+  .slide{position:absolute; inset:0; width:1280px; height:720px; display:none; overflow:hidden}
+  .slide.active{display:block}
+
+  .pad{position:absolute; inset:0; padding:74px 92px}
+  .light{background:var(--cream)}
+  .paper{background:var(--paper)}
+  .dark{background:radial-gradient(120% 130% at 80% -10%, #2a241a 0%, var(--ink) 42%, var(--ink2) 100%); color:var(--cream)}
+  .dark .muted,.dark .lead{color:#cabfa6}
+
+  .kicker{font-size:15px; font-weight:800; letter-spacing:.16em; text-transform:uppercase; color:var(--ochre)}
+  .dark .kicker{color:var(--yellow)}
+  h1.title{font-weight:800; letter-spacing:-0.035em; line-height:1.02; font-size:62px; margin-top:14px}
+  h1.big{font-size:78px}
+  .lead{font-size:23px; line-height:1.42; color:var(--muted2); max-width:62ch; margin-top:18px; font-weight:500}
+  .muted{color:var(--muted)}
+  .accent{color:var(--ochre)} .dark .accent{color:var(--yellow)}
+  .hl{background:linear-gradient(transparent 62%, var(--yellow2) 62%); padding:0 .06em}
+
+  /* logo */
+  .logo{display:inline-flex; align-items:center; gap:12px; font-weight:800; letter-spacing:-0.03em}
+  .logo .mark{width:38px;height:38px;border-radius:10px;background:var(--yellow);color:var(--ink);
+    display:flex;align-items:center;justify-content:center;font-size:16px;font-weight:800;letter-spacing:-0.04em}
+  .logo .wm{font-size:21px}
+  .dark .logo{color:var(--cream)}
+
+  /* slide chrome */
+  .chrome-tl{position:absolute; top:40px; left:92px; z-index:5}
+  .chrome-br{position:absolute; bottom:34px; right:46px; font-size:13px; color:var(--muted); font-weight:600; letter-spacing:.02em}
+  .dark .chrome-br{color:#8c7f63}
+  .pageno{font-variant-numeric:tabular-nums}
+
+  /* layout helpers */
+  .row{display:flex; gap:34px}
+  .col{display:flex; flex-direction:column}
+  .grow{flex:1}
+  .center-y{display:flex; flex-direction:column; justify-content:center; height:100%}
+
+  /* cards */
+  .cards{display:grid; gap:18px}
+  .card{background:var(--paper); border:1px solid var(--line); border-radius:18px; padding:24px 24px}
+  .dark .card{background:rgba(255,255,255,.045); border-color:rgba(255,255,255,.10)}
+  .card h3{font-size:20px; font-weight:800; letter-spacing:-0.02em; margin-bottom:7px}
+  .card p{font-size:15.5px; line-height:1.46; color:var(--muted2)}
+  .dark .card p{color:#bcb098}
+  .card .ico{font-size:26px; line-height:1; margin-bottom:12px; display:block}
+  .num{font-size:13px;font-weight:800;color:var(--ink);background:var(--yellow);width:30px;height:30px;border-radius:9px;
+    display:flex;align-items:center;justify-content:center;letter-spacing:0}
+
+  /* stat strip */
+  .stats{display:flex; gap:46px; margin-top:30px}
+  .stat .v{font-size:40px; font-weight:800; letter-spacing:-0.03em}
+  .stat .l{font-size:13.5px; color:var(--muted); font-weight:600; margin-top:2px}
+  .dark .stat .l{color:#9c8f72}
+
+  /* badges / pills */
+  .pill{display:inline-flex; align-items:center; gap:7px; font-size:13px; font-weight:700; padding:6px 13px; border-radius:999px;
+    background:var(--ink); color:var(--yellow); letter-spacing:.02em}
+  .pill.new{background:var(--yellow); color:var(--ink)}
+  .tag{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:700;padding:7px 13px;border-radius:10px;background:#fff;border:1px solid var(--line)}
+  .dark .tag{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.12);color:var(--cream)}
+
+  /* shot frame */
+  .shot{border-radius:14px; overflow:hidden; border:1px solid rgba(0,0,0,.07);
+    box-shadow:0 24px 60px -18px rgba(20,12,4,.45), 0 6px 18px -8px rgba(20,12,4,.25); background:#fff}
+  .shot img{display:block; width:100%; height:100%; object-fit:cover}
+  .dark .shot{border-color:rgba(255,255,255,.10)}
+
+  .bullets{margin-top:20px; display:flex; flex-direction:column; gap:15px}
+  .bullets li{list-style:none; display:flex; gap:13px; font-size:18px; line-height:1.4; color:var(--ink); align-items:flex-start}
+  .dark .bullets li{color:#e7ddc7}
+  .bullets .dot{flex:none;width:9px;height:9px;border-radius:3px;background:var(--yellow);margin-top:8px;transform:rotate(45deg)}
+  .bullets b{font-weight:800}
+
+  .foot-src{position:absolute; left:92px; bottom:34px; font-size:12px; color:var(--muted); max-width:62ch}
+  .dark .foot-src{color:#7d7158}
+
+  table.mtx{border-collapse:separate;border-spacing:0;width:100%;font-size:15px}
+  table.mtx th,table.mtx td{padding:11px 14px;text-align:left;border-bottom:1px solid var(--line)}
+  table.mtx th{font-size:12.5px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);font-weight:800}
+  table.mtx td b{font-weight:800}
+  .chk{color:var(--green);font-weight:800}
+  .crs{color:var(--line2);font-weight:800}
+
+  /* HUD */
+  .hud{position:fixed; left:0; right:0; bottom:0; height:4px; background:rgba(255,255,255,.08); z-index:50}
+  .hud .bar{height:100%; width:0; background:var(--yellow); transition:width .25s ease}
+  .counter{position:fixed; bottom:14px; left:18px; color:#9c8f72; font-size:12.5px; font-weight:600; z-index:50; font-variant-numeric:tabular-nums}
+  .hint{position:fixed; bottom:13px; right:18px; color:#6f6450; font-size:12px; z-index:50}
+
+  @media print{
+    @page{ size:1280px 720px; margin:0 }
+    body{overflow:visible;background:#fff}
+    .stage{position:static;display:block;overflow:visible}
+    .canvas{transform:none!important;width:1280px;height:720px}
+    .slide{position:relative!important;display:block!important;inset:auto;page-break-after:always;break-after:page}
+    .hud,.counter,.hint{display:none!important}
+  }
+</style>
+</head>
+<body>
+<div class="stage">
+  <div class="canvas" id="canvas">
+
+  <!-- 1 · COVER -->
+  <section class="slide active dark">
+    <div class="pad center-y">
+      <div class="logo" style="margin-bottom:40px"><span class="mark">FW</span><span class="wm" style="font-size:26px">ForkWork</span></div>
+      <div class="kicker">Live-commerce для городской еды</div>
+      <h1 class="title big" style="max-width:20ch">Смотри, как город<br>готовит — и заказывай<br>в один тап.</h1>
+      <p class="lead" style="color:#d8cdb4">Маркетплейс живой еды: интерактивная карта городских поваров, лайв-эфиры с заказом прямо из стрима, личные чаты, внутренний кошелёк и ИИ-агент.</p>
+      <div class="stats">
+        <div class="stat"><div class="v">4</div><div class="l">роли · полноценная экосистема</div></div>
+        <div class="stat"><div class="v">MVP+</div><div class="l">в проде на forkwork.online</div></div>
+        <div class="stat"><div class="v">10%</div><div class="l">комиссия — основной доход</div></div>
+      </div>
+    </div>
+    <div class="chrome-br">Инвестиционный питч · 2026</div>
+  </section>
+
+  <!-- 2 · PROBLEM -->
+  <section class="slide light">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="kicker">Проблема</div>
+      <h1 class="title" style="max-width:24ch">Городская еда застряла между бездушной доставкой и недосягаемыми поварами</h1>
+      <div class="cards" style="grid-template-columns:repeat(3,1fr); margin-top:40px">
+        <div class="card"><span class="ico">🔎</span><h3>Нечего «живого» найти</h3><p>Покупатель видит только сетевые рестораны в агрегаторе. Локальные крафтовые повара — невидимы, открытие происходит случайно в соцсетях.</p></div>
+        <div class="card"><span class="ico">🍳</span><h3>Повар не может монетизировать</h3><p>Талантливые домашние и крафтовые повара не имеют площадки, чтобы готовить «вживую», собирать аудиторию и легально продавать.</p></div>
+        <div class="card"><span class="ico">🤝</span><h3>Ноль доверия и вовлечения</h3><p>Картинки меню вместо живого процесса. Нельзя увидеть, спросить, поучаствовать — поэтому первый заказ у нового повара почти не случается.</p></div>
+      </div>
+      <div class="stats" style="margin-top:38px">
+        <div class="stat"><div class="v">№1</div><div class="l">барьер у нового повара — доверие, а не цена</div></div>
+        <div class="stat"><div class="v">2 мира</div><div class="l">контент в соцсетях ≠ покупка в агрегаторе</div></div>
+        <div class="stat"><div class="v">0</div><div class="l">площадок «эфир → заказ» для локальной еды</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 3 · SOLUTION -->
+  <section class="slide dark">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="kicker">Решение</div>
+      <h1 class="title" style="max-width:26ch">ForkWork соединяет контент и покупку в одном живом потоке</h1>
+      <p class="lead" style="max-width:70ch">Повар выходит в прямой эфир со своей кухни, зрители общаются в чате и заказывают блюдо в один тап — с доставкой или самовывозом и оплатой из кошелька. Открытие → доверие → заказ происходит в одном месте.</p>
+      <div class="cards" style="grid-template-columns:repeat(5,1fr); margin-top:42px; gap:14px">
+        <div class="card"><span class="ico">🗺️</span><h3 style="font-size:17px">Карта</h3><p style="font-size:14px">Повара рядом, статус, рейтинг, LIVE</p></div>
+        <div class="card"><span class="ico">📺</span><h3 style="font-size:17px">Лайв-эфиры</h3><p style="font-size:14px">Готовка вживую + заказ из стрима</p></div>
+        <div class="card"><span class="ico">💬</span><h3 style="font-size:17px">Чаты</h3><p style="font-size:14px">Открытый чат и личный — по согласию</p></div>
+        <div class="card"><span class="ico">💳</span><h3 style="font-size:17px">Кошелёк</h3><p style="font-size:14px">Заказы, чаевые, возвраты, антифрод</p></div>
+        <div class="card"><span class="ico">🤖</span><h3 style="font-size:17px">ИИ-агент</h3><p style="font-size:14px">Распознаёт блюдо в кадре, рекомендует</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 · HOW IT WORKS -->
+  <section class="slide light">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="kicker">Как это работает</div>
+      <h1 class="title" style="font-size:46px">Путь «от карты до вкуса» — четыре шага</h1>
+      <div class="row" style="margin-top:26px; align-items:stretch">
+        <div class="col grow" style="max-width:520px; gap:12px; justify-content:center">
+          <div class="card" style="display:flex;gap:16px;align-items:flex-start;padding:15px 20px"><span class="num">1</span><div><h3>Найди на карте</h3><p>Повара рядом со статусом, кухней, ценой и рейтингом. Фильтры: кухня, цена, доставка, LIVE.</p></div></div>
+          <div class="card" style="display:flex;gap:16px;align-items:flex-start;padding:15px 20px"><span class="num">2</span><div><h3>Зайди в эфир</h3><p>Смотри готовку вживую, общайся в чате, задавай вопросы повару прямо во время приготовления.</p></div></div>
+          <div class="card" style="display:flex;gap:16px;align-items:flex-start;padding:15px 20px"><span class="num">3</span><div><h3>Закажи из стрима</h3><p>Блюдо из эфира — в корзину в один тап. Доставка или самовывоз, понятный статус как у такси.</p></div></div>
+          <div class="card" style="display:flex;gap:16px;align-items:flex-start;padding:15px 20px"><span class="num">4</span><div><h3>Оплати кошельком</h3><p>ForkCoins: оплата, чаевые, возвраты. Повару — мгновенное зачисление за вычетом комиссии 10%.</p></div></div>
+        </div>
+        <div class="grow shot" style="align-self:center"><img src="shots/02-map.png" alt="Карта поваров"/></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5 · LIVE COMMERCE -->
+  <section class="slide paper">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="row" style="height:100%; align-items:center">
+        <div class="col grow" style="max-width:540px">
+          <div class="kicker">Ключевая магия</div>
+          <h1 class="title" style="font-size:54px">Эфир, который продаёт</h1>
+          <ul class="bullets">
+            <li><span class="dot"></span><div><b>Заказ прямо из стрима.</b> Блюда эфира — отдельным блоком, оформление в один тап без выхода из просмотра.</div></li>
+            <li><span class="dot"></span><div><b>Открытый чат + закреплённое промо.</b> Живое общение, реакции, промокод эфира (LIVE10) у всех на виду.</div></li>
+            <li><span class="dot"></span><div><b>ИИ-агент анализирует кадр.</b> Распознаёт блюдо («Пицца Маргарита», уверенность 97%), сверяет с меню и предлагает «Заказать».</div></li>
+            <li><span class="dot"></span><div><b>Личный чат по согласию повара</b> — путь к повторным заказам и лояльности.</div></li>
+          </ul>
+        </div>
+        <div class="grow shot"><img src="shots/06-stream-room.png" alt="Комната эфира"/></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 6 · CREATOR STUDIO (dual camera) -->
+  <section class="slide light">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="row" style="height:100%; align-items:center">
+        <div class="grow shot"><img src="shots/08-kitchen-studio.png" alt="Студия двух камер"/></div>
+        <div class="col grow" style="max-width:500px">
+          <span class="pill new">★ Новое</span>
+          <div class="kicker" style="margin-top:14px">Инструменты повара</div>
+          <h1 class="title" style="font-size:50px">Профессиональная студия в кармане</h1>
+          <ul class="bullets">
+            <li><span class="dot"></span><div><b>Две камеры одновременно.</b> Передняя и задняя — в двух окнах: показывай и себя, и блюдо крупным планом.</div></li>
+            <li><span class="dot"></span><div><b>Качество до 1080p · 60 fps</b>, выбор устройства, зеркало, графика (яркость / контраст / насыщенность).</div></li>
+            <li><span class="dot"></span><div><b>Предпросмотр перед эфиром</b> — повар выходит в кадр уверенно, без сторонних программ.</div></li>
+            <li><span class="dot"></span><div><b>Готово к WebRTC/LiveKit</b> — реальное вещание подключается без переделки UX.</div></li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 7 · ROLES & MANAGER -->
+  <section class="slide dark">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="row" style="height:100%; align-items:center">
+        <div class="col grow" style="max-width:560px">
+          <div class="kicker">Экосистема ролей</div>
+          <h1 class="title" style="font-size:50px">Операционный слой, который масштабирует площадку</h1>
+          <p class="lead" style="margin-top:14px">Заказчик · Повар · <span class="accent">Менеджер</span> · Администратор. Менеджер — наша операционная единица роста: курирует портфель поваров и их клиентов.</p>
+          <ul class="bullets" style="margin-top:16px">
+            <li><span class="dot"></span><div><b>Глубокая аналитика</b> по поварам и клиентам: выручка, заказы, рейтинг, активность.</div></li>
+            <li><span class="dot"></span><div><b>Передача прав</b> контроля и поддержки другому менеджеру — операции не привязаны к человеку.</div></li>
+            <li><span class="dot"></span><div><b>Быстрые инструменты:</b> пауза приёма, промо в эфире, маркетинг-бонус, разбор жалоб.</div></li>
+          </ul>
+        </div>
+        <div class="grow shot"><img src="shots/09-manager.png" alt="Кабинет менеджера"/></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8 · MARKET -->
+  <section class="slide dark">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="kicker">Рынок</div>
+      <h1 class="title">Большой рынок еды × волна live-commerce</h1>
+      <div class="row" style="margin-top:26px; align-items:center">
+        <svg width="520" height="430" viewBox="0 0 520 430" style="flex:none">
+          <circle cx="260" cy="215" r="205" fill="none" stroke="#3a3324" stroke-width="1.5"/>
+          <circle cx="260" cy="248" r="170" fill="rgba(252,208,0,.07)" stroke="#4a4230" stroke-width="1.5"/>
+          <circle cx="260" cy="292" r="120" fill="rgba(252,208,0,.13)" stroke="#6a5d3c" stroke-width="1.5"/>
+          <circle cx="260" cy="338" r="66" fill="var(--yellow)" />
+          <text x="260" y="58" text-anchor="middle" fill="#cabfa6" font-size="15" font-weight="800">TAM</text>
+          <text x="260" y="98" text-anchor="middle" fill="#fffefb" font-size="30" font-weight="800">₽1.2 трлн</text>
+          <text x="260" y="148" text-anchor="middle" fill="#bcb098" font-size="14">Готовая еда и доставка в РФ / год</text>
+          <text x="260" y="206" text-anchor="middle" fill="#cabfa6" font-size="14" font-weight="800">SAM · ₽150 млрд</text>
+          <text x="260" y="226" text-anchor="middle" fill="#9c8f72" font-size="12.5">локальная/крафтовая еда + live-commerce</text>
+          <text x="260" y="300" text-anchor="middle" fill="#1a1610" font-size="14" font-weight="800" opacity=".0">SOM</text>
+          <text x="260" y="333" text-anchor="middle" fill="#171410" font-size="14" font-weight="800">SOM</text>
+          <text x="260" y="356" text-anchor="middle" fill="#171410" font-size="19" font-weight="800">₽3–6 млрд</text>
+        </svg>
+        <div class="col grow" style="gap:18px; padding-left:10px">
+          <div class="card"><h3 style="color:#fffefb">Почему сейчас</h3><p>Прямые эфиры из приложения стали нормой, а live-commerce уже перестраивает ритейл в Азии. Еда — самый «смотрибельный» и импульсный вертикал для этого формата.</p></div>
+          <div class="card"><h3 style="color:#fffefb">Попутный ветер</h3><p>Рост креатор-экономики и самозанятых, спрос на крафтовую и «честную» еду, привычка к доставке и QR-оплате в один тап.</p></div>
+          <div class="card"><h3 style="color:#fffefb">Точка входа</h3><p>Один город с высокой плотностью поваров → плотность создаёт сетевой эффект эфиров и сарафан.</p></div>
+        </div>
+      </div>
+    </div>
+    <div class="foot-src">Оценки рынка — иллюстративные ориентиры для модели; требуют валидации в due diligence.</div>
+  </section>
+
+  <!-- 9 · BUSINESS MODEL -->
+  <section class="slide light">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="kicker">Бизнес-модель</div>
+      <h1 class="title">Пять потоков выручки на одной транзакции</h1>
+      <div class="row" style="margin-top:34px; align-items:center">
+        <div class="cards grow" style="grid-template-columns:repeat(2,1fr); max-width:640px">
+          <div class="card"><h3>① Комиссия 10%</h3><p>Основной доход с каждого заказа. Уже реализовано в платёжной логике кошелька.</p></div>
+          <div class="card"><h3>② Кошелёк и чаевые</h3><p>Внутренние ForkCoins: float средств, чаевые поварам, апсейл пополнений.</p></div>
+          <div class="card"><h3>③ Премиум для поваров</h3><p>Продвижение в эфире, расширенная студия и аналитика — подписка.</p></div>
+          <div class="card"><h3>④ Manager-as-a-service</h3><p>Операционное кураторство поваров как доходная услуга площадки.</p></div>
+          <div class="card" style="grid-column:span 2"><h3>⑤ Промо и реклама в эфирах</h3><p>Закреплённые промо, спецразмещение поваров и брендов-партнёров.</p></div>
+        </div>
+        <div class="col grow" style="padding-left:8px">
+          <div class="muted" style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:14px">Структура выручки на горизонте</div>
+          <svg width="430" height="300" viewBox="0 0 430 300">
+            <g font-size="14" font-weight="700" fill="#48402e">
+              <text x="0" y="34">Комиссия 10%</text>
+              <text x="0" y="92">Премиум поваров</text>
+              <text x="0" y="150">Кошелёк / чаевые</text>
+              <text x="0" y="208">Manager-as-a-service</text>
+              <text x="0" y="266">Промо и реклама</text>
+            </g>
+            <g>
+              <rect x="170" y="18" width="248" height="22" rx="6" fill="#efe4c8"/><rect x="170" y="18" width="223" height="22" rx="6" fill="var(--yellow)"/><text x="404" y="34" text-anchor="end" font-size="13" font-weight="800" fill="#171410">55%</text>
+              <rect x="170" y="76" width="248" height="22" rx="6" fill="#efe4c8"/><rect x="170" y="76" width="74" height="22" rx="6" fill="#d4a534"/><text x="250" y="92" font-size="13" font-weight="800" fill="#7c6e54">18%</text>
+              <rect x="170" y="134" width="248" height="22" rx="6" fill="#efe4c8"/><rect x="170" y="134" width="62" height="22" rx="6" fill="#d09c2e"/><text x="238" y="150" font-size="13" font-weight="800" fill="#7c6e54">14%</text>
+              <rect x="170" y="192" width="248" height="22" rx="6" fill="#efe4c8"/><rect x="170" y="192" width="35" height="22" rx="6" fill="#b28324"/><text x="211" y="208" font-size="13" font-weight="800" fill="#7c6e54">8%</text>
+              <rect x="170" y="250" width="248" height="22" rx="6" fill="#efe4c8"/><rect x="170" y="250" width="25" height="22" rx="6" fill="#8f6818"/><text x="201" y="266" font-size="13" font-weight="800" fill="#7c6e54">5%</text>
+            </g>
+          </svg>
+          <div class="muted" style="font-size:12px;margin-top:6px">Иллюстративный микс на зрелой стадии.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 10 · UNIT ECONOMICS -->
+  <section class="slide paper">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="kicker">Юнит-экономика</div>
+      <h1 class="title">Маржинальная транзакция и растущий LTV</h1>
+      <div class="row" style="margin-top:30px; gap:26px">
+        <div class="cards" style="grid-template-columns:1fr; gap:14px; min-width:330px">
+          <div class="card"><div class="muted" style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.08em">Средний чек</div><div style="font-size:38px;font-weight:800;letter-spacing:-.03em">₽1 500</div></div>
+          <div class="card"><div class="muted" style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.08em">Выручка с заказа · 10%</div><div style="font-size:38px;font-weight:800;letter-spacing:-.03em;color:var(--ochre)">₽150</div></div>
+          <div class="card"><div class="muted" style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.08em">Вклад после эквайринга*</div><div style="font-size:38px;font-weight:800;letter-spacing:-.03em">≈ ₽120</div></div>
+        </div>
+        <div class="card grow">
+          <h3 style="margin-bottom:14px">Эфир превращает зрителя в повторного клиента</h3>
+          <svg width="640" height="300" viewBox="0 0 640 300">
+            <!-- funnel bars -->
+            <g font-size="13.5" font-weight="700" fill="#48402e">
+              <text x="0" y="40">Зрители эфира</text>
+              <text x="0" y="98">→ Первый заказ</text>
+              <text x="0" y="156">→ Повторный заказ</text>
+              <text x="0" y="214">→ Постоянный клиент</text>
+            </g>
+            <rect x="210" y="22" width="410" height="26" rx="7" fill="var(--yellow)"/><text x="610" y="40" text-anchor="end" font-size="13" font-weight="800" fill="#171410">100%</text>
+            <rect x="210" y="80" width="160" height="26" rx="7" fill="#d4a534"/><text x="380" y="98" font-size="13" font-weight="800" fill="#7c6e54">~6–9%</text>
+            <rect x="210" y="138" width="92" height="26" rx="7" fill="#d09c2e"/><text x="312" y="156" font-size="13" font-weight="800" fill="#7c6e54">повтор &gt; 1</text>
+            <rect x="210" y="196" width="54" height="26" rx="7" fill="#b28324"/><text x="274" y="214" font-size="13" font-weight="800" fill="#7c6e54">ядро LTV</text>
+            <line x1="210" y1="252" x2="620" y2="252" stroke="#ecdfc4"/>
+            <text x="210" y="276" font-size="14.5" font-weight="800" fill="#171410">Рычаг прибыли: LTV/CAC растёт на бесплатном</text>
+            <text x="210" y="296" font-size="14.5" font-weight="800" fill="#171410">органик-трафике из эфиров и сарафана</text>
+          </svg>
+        </div>
+      </div>
+    </div>
+    <div class="foot-src">* демо-логика: дебет кошелька на сумму заказа, повару — сумма минус 10%. Конверсии — целевые ориентиры модели, не факт.</div>
+  </section>
+
+  <!-- 11 · COMPETITION -->
+  <section class="slide light">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="kicker">Конкуренты и позиционирование</div>
+      <h1 class="title">Никто не соединяет живой контент и локальную покупку</h1>
+      <div class="row" style="margin-top:26px; align-items:center">
+        <svg width="470" height="400" viewBox="0 0 470 400" style="flex:none">
+          <rect x="60" y="20" width="390" height="330" fill="#fff" stroke="#ecdfc4"/>
+          <line x1="255" y1="20" x2="255" y2="350" stroke="#ecdfc4"/>
+          <line x1="60" y1="185" x2="450" y2="185" stroke="#ecdfc4"/>
+          <text x="255" y="374" text-anchor="middle" font-size="12.5" font-weight="800" fill="#9c8c6c">ЖИВОЕ ВОВЛЕЧЕНИЕ / КОНТЕНТ →</text>
+          <text x="30" y="185" text-anchor="middle" font-size="12.5" font-weight="800" fill="#9c8c6c" transform="rotate(-90 30 185)">ЛОКАЛЬНОСТЬ / КРАФТ →</text>
+          <!-- competitors -->
+          <g font-size="12.5" font-weight="700" fill="#60553f">
+            <circle cx="120" cy="300" r="7" fill="#c0b08e"/><text x="133" y="304">Агрегаторы доставки</text>
+            <circle cx="150" cy="120" r="7" fill="#c0b08e"/><text x="163" y="124">Dark kitchens</text>
+            <circle cx="330" cy="285" r="7" fill="#c0b08e"/><text x="270" y="270">Инста-повара</text>
+            <circle cx="200" cy="225" r="7" fill="#c0b08e"/><text x="150" y="245">Маркетплейсы еды</text>
+          </g>
+          <!-- forkwork -->
+          <circle cx="375" cy="92" r="15" fill="var(--yellow)" stroke="#171410" stroke-width="2"/>
+          <text x="375" y="97" text-anchor="middle" font-size="11" font-weight="800" fill="#171410">FW</text>
+          <text x="358" y="64" text-anchor="middle" font-size="13.5" font-weight="800" fill="#171410">ForkWork</text>
+        </svg>
+        <div class="grow">
+          <table class="mtx">
+            <tr><th>Возможность</th><th>Агрегатор</th><th>Инста-повар</th><th class="accent">ForkWork</th></tr>
+            <tr><td>Локальные крафт-повара</td><td class="crs">—</td><td class="chk">✓</td><td><b class="chk">✓</b></td></tr>
+            <tr><td>Живой эфир готовки</td><td class="crs">—</td><td>части</td><td><b class="chk">✓</b></td></tr>
+            <tr><td>Заказ из контента в 1 тап</td><td class="crs">—</td><td class="crs">—</td><td><b class="chk">✓</b></td></tr>
+            <tr><td>Кошелёк, чаевые, возвраты</td><td>части</td><td class="crs">—</td><td><b class="chk">✓</b></td></tr>
+            <tr><td>ИИ-агент по кадру эфира</td><td class="crs">—</td><td class="crs">—</td><td><b class="chk">✓</b></td></tr>
+            <tr><td>Операционный слой (менеджеры)</td><td class="chk">✓</td><td class="crs">—</td><td><b class="chk">✓</b></td></tr>
+          </table>
+          <p class="muted" style="font-size:15px;margin-top:16px;max-width:46ch">Мы не конкурируем за «дешевле и быстрее». Мы создаём новый формат: <b>еда как живое шоу с мгновенной покупкой.</b></p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 12 · TRACTION / BUILT -->
+  <section class="slide dark">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="kicker">Что уже сделано</div>
+      <h1 class="title">Не слайдверк, а работающий продукт в проде</h1>
+      <div class="row" style="margin-top:24px; gap:26px; align-items:center">
+        <div class="col" style="max-width:430px; gap:14px">
+          <ul class="bullets" style="margin-top:0">
+            <li><span class="dot"></span><div><b>MVP+ развёрнут</b> на forkwork.online — HTTPS, Яндекс.Карты, постоянная БД.</div></li>
+            <li><span class="dot"></span><div><b>4 роли целиком:</b> заказчик, повар, менеджер, админ — со сквозными сценариями.</div></li>
+            <li><span class="dot"></span><div><b>Полный стек функций ТЗ:</b> карта, эфиры, чаты, e-commerce, кошелёк, отзывы, ИИ, аналитика.</div></li>
+            <li><span class="dot"></span><div><b>Инженерия:</b> 17 таблиц БД, 23 REST-маршрута, авто-деплой из Git, error-boundary, без тупиков.</div></li>
+          </ul>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:6px">
+            <span class="tag">Next.js 16</span><span class="tag">TypeScript</span><span class="tag">SQLite</span><span class="tag">Claude API</span><span class="tag">Amvera Cloud</span>
+          </div>
+        </div>
+        <div class="grow shot"><img src="shots/10-admin.png" alt="Админ-аналитика"/></div>
+        <div class="grow shot"><img src="shots/13-chef-overview.png" alt="Аналитика повара"/></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 13 · GTM + ROADMAP -->
+  <section class="slide light">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="kicker">Go-to-market и роадмап</div>
+      <h1 class="title">Плотность в одном городе → сетевой эффект → тиражирование</h1>
+      <div class="cards" style="grid-template-columns:repeat(3,1fr); margin-top:30px">
+        <div class="card"><h3>1 · Плотность</h3><p>Запуск в одном районе/городе: набираем критическую массу поваров, чтобы эфиры шли постоянно.</p></div>
+        <div class="card"><h3>2 · Сарафан через эфиры</h3><p>Контент поваров = бесплатный трафик. Зрители приводят зрителей, CAC падает.</p></div>
+        <div class="card"><h3>3 · Тиражирование</h3><p>Плейбук менеджера копирует операционку на новые города почти без переизобретения.</p></div>
+      </div>
+      <div style="margin-top:36px">
+        <svg width="1096" height="150" viewBox="0 0 1096 150">
+          <line x1="20" y1="48" x2="1076" y2="48" stroke="#ddcca7" stroke-width="2"/>
+          <g>
+            <circle cx="90" cy="48" r="9" fill="var(--yellow)" stroke="#171410" stroke-width="2"/>
+            <text x="90" y="92" text-anchor="middle" font-size="14.5" font-weight="800" fill="#171410">Сейчас · MVP+</text>
+            <text x="90" y="114" text-anchor="middle" font-size="13" fill="#7c6e54">прод, 4 роли, ИИ</text>
+          </g>
+          <g>
+            <circle cx="350" cy="48" r="9" fill="#d4a534"/>
+            <text x="350" y="92" text-anchor="middle" font-size="14.5" font-weight="800" fill="#171410">Q3 · Видео-эфир</text>
+            <text x="350" y="114" text-anchor="middle" font-size="13" fill="#7c6e54">WebRTC/LiveKit, WebSocket</text>
+          </g>
+          <g>
+            <circle cx="610" cy="48" r="9" fill="#d09c2e"/>
+            <text x="610" y="92" text-anchor="middle" font-size="14.5" font-weight="800" fill="#171410">Q4 · Платежи</text>
+            <text x="610" y="114" text-anchor="middle" font-size="13" fill="#7c6e54">эквайринг, эскроу, пилот-город</text>
+          </g>
+          <g>
+            <circle cx="850" cy="48" r="9" fill="#b28324"/>
+            <text x="850" y="92" text-anchor="middle" font-size="14.5" font-weight="800" fill="#171410">Q1+ · Моб. приложения</text>
+            <text x="850" y="114" text-anchor="middle" font-size="13" fill="#7c6e54">iOS/Android, пуши</text>
+          </g>
+          <g>
+            <circle cx="1040" cy="48" r="9" fill="#8f6818"/>
+            <text x="1040" y="92" text-anchor="middle" font-size="14.5" font-weight="800" fill="#171410">Масштаб</text>
+            <text x="1040" y="114" text-anchor="middle" font-size="13" fill="#7c6e54">новые города</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- 14 · TEAM -->
+  <section class="slide dark">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="kicker">Команда</div>
+      <h1 class="title">Кто строит ForkWork</h1>
+      <div class="cards" style="grid-template-columns:repeat(4,1fr); margin-top:40px">
+        <div class="card"><div style="width:54px;height:54px;border-radius:14px;background:var(--yellow);margin-bottom:14px"></div><h3 style="color:#fffefb">CEO / Продукт</h3><p>Видение, рынок, повара, монетизация. <span class="accent">— заполнить —</span></p></div>
+        <div class="card"><div style="width:54px;height:54px;border-radius:14px;background:#d4a534;margin-bottom:14px"></div><h3 style="color:#fffefb">CTO / Инженерия</h3><p>Платформа, эфиры, ИИ, масштабирование. <span class="accent">— заполнить —</span></p></div>
+        <div class="card"><div style="width:54px;height:54px;border-radius:14px;background:#d09c2e;margin-bottom:14px"></div><h3 style="color:#fffefb">Chef Success / Ops</h3><p>Привлечение и кураторство поваров, плейбук менеджера. <span class="accent">— заполнить —</span></p></div>
+        <div class="card"><div style="width:54px;height:54px;border-radius:14px;background:#b28324;margin-bottom:14px"></div><h3 style="color:#fffefb">Growth / Маркетинг</h3><p>Эфиры как канал, сарафан, запуск города. <span class="accent">— заполнить —</span></p></div>
+      </div>
+      <div class="card" style="margin-top:22px"><h3 style="color:#fffefb">Эдвайзеры</h3><p>Фудтех, платежи, креатор-экономика — добавьте 2–3 имени с релевантным опытом для усиления доверия инвестора.</p></div>
+    </div>
+    <div class="foot-src">Слайд-шаблон: впишите реальные имена, роли и достижения команды и эдвайзеров.</div>
+  </section>
+
+  <!-- 15 · ASK + VISION -->
+  <section class="slide dark">
+    <div class="chrome-tl"><div class="logo"><span class="mark">FW</span></div></div>
+    <div class="pad">
+      <div class="row" style="height:100%; align-items:center; gap:50px">
+        <div class="col grow" style="max-width:560px">
+          <div class="kicker">Раунд</div>
+          <h1 class="title" style="font-size:52px">Привлекаем <span class="accent">seed</span>, чтобы зажечь первый город</h1>
+          <div class="stats" style="margin-top:24px">
+            <div class="stat"><div class="v accent">$500K</div><div class="l">seed-раунд · сумма к настройке</div></div>
+            <div class="stat"><div class="v">18 мес</div><div class="l">runway до метрик A-раунда</div></div>
+          </div>
+          <ul class="bullets" style="margin-top:22px">
+            <li><span class="dot"></span><div>Видео-эфир (WebRTC/LiveKit) и реальные платежи с эскроу.</div></li>
+            <li><span class="dot"></span><div>Запуск пилот-города: плотность поваров + операционный плейбук.</div></li>
+            <li><span class="dot"></span><div>Цель раунда: доказать <b>эфир → заказ → повтор</b> на живых деньгах.</div></li>
+          </ul>
+        </div>
+        <div class="col" style="align-items:center">
+          <div class="muted" style="font-size:13px;font-weight:800;text-transform:uppercase;letter-spacing:.1em;margin-bottom:16px;color:#9c8f72">Использование средств</div>
+          <svg width="300" height="300" viewBox="0 0 300 300">
+            <circle cx="150" cy="150" r="110" fill="none" stroke="#3a3324" stroke-width="44"/>
+            <!-- segments via stroke-dasharray, circumference=2*pi*110≈691 -->
+            <circle cx="150" cy="150" r="110" fill="none" stroke="var(--yellow)" stroke-width="44" stroke-dasharray="276 691" transform="rotate(-90 150 150)"/>
+            <circle cx="150" cy="150" r="110" fill="none" stroke="#d4a534" stroke-width="44" stroke-dasharray="207 691" stroke-dashoffset="-276" transform="rotate(-90 150 150)"/>
+            <circle cx="150" cy="150" r="110" fill="none" stroke="#d09c2e" stroke-width="44" stroke-dasharray="138 691" stroke-dashoffset="-483" transform="rotate(-90 150 150)"/>
+            <circle cx="150" cy="150" r="110" fill="none" stroke="#8f6818" stroke-width="44" stroke-dasharray="70 691" stroke-dashoffset="-621" transform="rotate(-90 150 150)"/>
+            <text x="150" y="145" text-anchor="middle" font-size="15" fill="#9c8f72" font-weight="700">Раунд</text>
+            <text x="150" y="170" text-anchor="middle" font-size="22" fill="#fffefb" font-weight="800">$500K</text>
+          </svg>
+          <div style="display:flex;flex-direction:column;gap:7px;margin-top:16px;font-size:13.5px;font-weight:700">
+            <span style="color:#e7ddc7"><b style="color:var(--yellow)">●</b> Продукт / инженерия — 40%</span>
+            <span style="color:#e7ddc7"><b style="color:#d4a534">●</b> Привлечение поваров и спрос — 30%</span>
+            <span style="color:#e7ddc7"><b style="color:#d09c2e">●</b> Операции / менеджеры — 20%</span>
+            <span style="color:#e7ddc7"><b style="color:#8f6818">●</b> Юр. / комплаенс — 10%</span>
+          </div>
+        </div>
+      </div>
+      <div style="position:absolute;left:92px;bottom:54px;right:92px">
+        <div style="height:1px;background:rgba(255,255,255,.12);margin-bottom:18px"></div>
+        <div style="font-size:21px;font-weight:800;letter-spacing:-.02em;color:#fffefb">«Сделать каждого городского повара медиа и бизнесом, а каждый ужин — живым событием.»</div>
+      </div>
+    </div>
+    <div class="chrome-br">forkwork.online · hello@forkwork.online</div>
+  </section>
+
+  </div>
+</div>
+
+<div class="counter"><span id="cur">1</span> / 15</div>
+<div class="hint">← → · пробел · F — на весь экран · P — печать/PDF</div>
+<div class="hud"><div class="bar" id="bar"></div></div>
+
+<script>
+  const slides = [...document.querySelectorAll('.slide')];
+  const canvas = document.getElementById('canvas');
+  const bar = document.getElementById('bar');
+  const cur = document.getElementById('cur');
+  let i = 0;
+  function show(n){
+    i = Math.max(0, Math.min(slides.length-1, n));
+    slides.forEach((s,k)=>s.classList.toggle('active', k===i));
+    bar.style.width = ((i+1)/slides.length*100)+'%';
+    cur.textContent = i+1;
+  }
+  function fit(){
+    const s = Math.min(window.innerWidth/1280, window.innerHeight/720);
+    canvas.style.transform = 'scale('+s+')';
+  }
+  window.addEventListener('resize', fit);
+  window.addEventListener('keydown', e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){ show(i+1); e.preventDefault(); }
+    else if(['ArrowLeft','PageUp'].includes(e.key)){ show(i-1); e.preventDefault(); }
+    else if(e.key==='Home'){ show(0); }
+    else if(e.key==='End'){ show(slides.length-1); }
+    else if(e.key==='f'||e.key==='F'){ if(!document.fullscreenElement) document.documentElement.requestFullscreen(); else document.exitFullscreen(); }
+    else if(e.key==='p'||e.key==='P'){ window.print(); }
+  });
+  // click navigation (right half next, left half prev)
+  document.querySelector('.stage').addEventListener('click', e=>{
+    show(e.clientX > window.innerWidth*0.5 ? i+1 : i-1);
+  });
+  fit(); show(0);
+</script>
+</body>
+</html>
