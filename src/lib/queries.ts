@@ -13,7 +13,7 @@ SELECT c.id, c.user_id AS userId, u.name, u.avatar, c.bio, c.specialization,
   c.work_hours AS workHours,
   COALESCE((SELECT ROUND(AVG(rating),1) FROM reviews r WHERE r.chef_id = c.id AND r.status='visible'),0) AS rating,
   (SELECT COUNT(*) FROM reviews r WHERE r.chef_id = c.id AND r.status='visible') AS reviewsCount,
-  (SELECT s.id FROM streams s WHERE s.chef_id = c.id AND s.status='live' LIMIT 1) AS liveStreamId,
+  (SELECT s.id FROM streams s WHERE s.chef_id = c.id AND s.status='live' AND s.visibility='public' LIMIT 1) AS liveStreamId,
   (SELECT COUNT(*) FROM dishes d WHERE d.chef_id = c.id AND d.available=1) AS dishesCount
 FROM chefs c
 JOIN users u ON u.id = c.user_id
@@ -92,20 +92,29 @@ const parseStream = (s: StreamRow): StreamInfo => ({ ...s, dishIds: JSON.parse(s
 const STREAM_SELECT = `
 SELECT s.id, s.chef_id AS chefId, s.title, s.status, s.scheduled_at AS scheduledAt,
   s.started_at AS startedAt, s.viewers, s.dish_ids AS dishIds, s.pinned_message AS pinnedMessage,
-  s.tags, u.name AS chefName, u.avatar AS chefAvatar, cu.name AS cuisineName
+  s.tags, s.visibility, s.camera_live AS cameraLive,
+  u.name AS chefName, u.avatar AS chefAvatar, cu.name AS cuisineName
 FROM streams s
 JOIN chefs c ON c.id = s.chef_id
 JOIN users u ON u.id = c.user_id
 LEFT JOIN cuisines cu ON cu.id = c.cuisine_id`;
 
+// Каталог показывает только публичные эфиры — индивидуальные доступны по личной ссылке
 export function listStreams(): StreamInfo[] {
   const rows = db
     .prepare(
       `${STREAM_SELECT}
+       WHERE s.visibility = 'public'
        ORDER BY CASE s.status WHEN 'live' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END, s.viewers DESC`
     )
     .all() as unknown as StreamRow[];
   return rows.map(parseStream);
+}
+
+// Ключ доступа к приватному эфиру — отдаётся только серверному коду, в клиент не течёт
+export function getStreamAccessKey(id: number): string {
+  const row = db.prepare("SELECT access_key AS k FROM streams WHERE id = ?").get(id) as { k: string } | undefined;
+  return row?.k ?? "";
 }
 
 export function getStream(id: number): StreamInfo | null {

@@ -1,15 +1,16 @@
 @import "tailwindcss";
 
-/* Палитра «светлая охра» поверх стандартных имён Tailwind — весь интерфейс
-   окрашивается единообразно, без правки разметки. Оттенки облегчены,
+/* Палитра «охра» поверх стандартных имён Tailwind — весь интерфейс
+   окрашивается единообразно, без правки разметки.
    stone-950 играет роль фирменного «чёрного» в духе Uber,
-   yellow-400 — солнечный акцент в духе Яндекс Go */
+   yellow-400 теперь несёт главный охристый акцент (тёплая терракотовая охра),
+   orange — вспомогательные охристые полутона */
 @theme {
-  --color-white: #fffefb;
+  --color-white: #fffdf8;
 
-  --color-yellow-300: #ffe566;
-  --color-yellow-400: #fcd000;
-  --color-yellow-500: #efc100;
+  --color-yellow-300: #e0a75f;
+  --color-yellow-400: #c9822f;
+  --color-yellow-500: #ad6a1f;
 
   --color-stone-50: #faf6ec;
   --color-stone-100: #f5eedb;
@@ -26,11 +27,11 @@
   --color-orange-50: #fdf7e5;
   --color-orange-100: #faeeca;
   --color-orange-200: #f3dd9f;
-  --color-orange-300: #e9c772;
-  --color-orange-400: #ddb14d;
-  --color-orange-500: #d09c2e; /* светлая охра — акцент */
-  --color-orange-600: #b28324;
-  --color-orange-700: #8f6818;
+  --color-orange-300: #e5bc6a;
+  --color-orange-400: #d29a44;
+  --color-orange-500: #bf7d27; /* насыщенная охра — акцент */
+  --color-orange-600: #9f651e;
+  --color-orange-700: #7f5016;
   --color-orange-800: #6e4f12;
   --color-orange-900: #553d0c;
   --color-orange-950: #30220a;

@@ -17,13 +17,26 @@ const BOT_SCRIPT: [string, string][] = [
 ];
 const BOT_INTERVAL_SEC = 40;
 
-export async function GET(_req: Request, ctx: { params: Promise<{ id: string }> }) {
+// Доступ к чату приватного эфира — по тому же ключу, что и к странице
+async function chatAccessDenied(streamId: number, key: string): Promise<boolean> {
+  const s = db
+    .prepare("SELECT chef_id AS chefId, visibility, access_key AS accessKey FROM streams WHERE id = ?")
+    .get(streamId) as { chefId: number; visibility: string; accessKey: string } | undefined;
+  if (!s || s.visibility !== "private") return false;
+  if (key !== "" && key === s.accessKey) return false;
+  const user = await getSessionUser();
+  return !(user && (user.chefId === s.chefId || user.role === "admin" || user.role === "manager"));
+}
+
+export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }) {
   const { id } = await ctx.params;
   const streamId = Number(id);
   const stream = db
     .prepare("SELECT id, status, started_at AS startedAt, viewers, bot_cursor AS botCursor FROM streams WHERE id = ?")
     .get(streamId) as { id: number; status: string; startedAt: string | null; viewers: number; botCursor: number } | undefined;
   if (!stream) return err("Стрим не найден", 404);
+  const key = String(new URL(req.url).searchParams.get("key") ?? "");
+  if (await chatAccessDenied(streamId, key)) return err("Индивидуальный эфир: нужен ключ доступа", 403);
 
   // Подкидываем сообщения «зрителей» по расписанию, пока эфир идёт
   if (stream.status === "live" && stream.startedAt) {
@@ -67,6 +80,7 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   if (stream.status !== "live") return err("Эфир не идёт — чат закрыт");
 
   const body = await req.json().catch(() => null);
+  if (await chatAccessDenied(streamId, String(body?.key ?? ""))) return err("Индивидуальный эфир: нужен ключ доступа", 403);
   const kind = body?.kind === "reaction" ? "reaction" : "msg";
   const text = String(body?.text ?? "").trim().slice(0, 500);
   if (!text) return err("Пустое сообщение");
