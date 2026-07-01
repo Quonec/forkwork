@@ -13,7 +13,7 @@ type KitchenData = {
   profile: { id: number; bio: string; specialization: string; cuisineId: number | null; lat: number | null; lng: number | null; address: string; priceLevel: number; available: number; delivery: number; pickup: number; workHours: string };
   dishes: { id: number; name: string; description: string; price: number; emoji: string; tags: string; available: number }[];
   recipes: { id: number; title: string; timeMin: number; difficulty: number; emoji: string }[];
-  streams: { id: number; title: string; status: string; scheduledAt: string | null; startedAt: string | null; viewers: number; pinnedMessage: string }[];
+  streams: { id: number; title: string; status: string; scheduledAt: string | null; startedAt: string | null; viewers: number; pinnedMessage: string; visibility: "public" | "private"; accessKey: string }[];
   orders: { id: number; status: string; items: CartItem[]; total: number; fee: number; deliveryType: string; address: string; source: string; createdAt: string; customerName: string }[];
   chats: { id: number; status: string; createdAt: string; customerName: string; customerAvatar: string }[];
   reviews: { id: number; rating: number; text: string; chefReply: string; createdAt: string; authorName: string; authorAvatar: string; status: string }[];
@@ -381,6 +381,7 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
   const [selDishes, setSelDishes] = useState<number[]>([]);
   const [startNow, setStartNow] = useState(true);
   const [scheduledAt, setScheduledAt] = useState("");
+  const [visibility, setVisibility] = useState<"public" | "private">("public");
 
   const toggleDish = (id: number) =>
     setSelDishes((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -404,6 +405,22 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
             ))}
           </div>
         </div>
+        <div>
+          <p className="label">Тип эфира</p>
+          <div className="flex gap-1.5">
+            <button onClick={() => setVisibility("public")} className={`chip ${visibility === "public" ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-600"}`}>
+              Публичный
+            </button>
+            <button onClick={() => setVisibility("private")} className={`chip ${visibility === "private" ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-600"}`}>
+              Индивидуальный
+            </button>
+          </div>
+          {visibility === "private" && (
+            <p className="mt-1.5 text-[11px] text-stone-400">
+              Эфир не попадёт в каталог. После создания появится личная ссылка с ключом — отправьте её приглашённым.
+            </p>
+          )}
+        </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={startNow} onChange={(e) => setStartNow(e.target.checked)} />
           Выйти в эфир сразу
@@ -412,10 +429,14 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
         <button
           onClick={async () => {
             const ok = await act(
-              { action: "stream_create", title, pinnedMessage: pinned, tags, dishIds: selDishes, startNow, scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined },
-              startNow ? "Вы в эфире!" : "Эфир запланирован"
+              { action: "stream_create", title, pinnedMessage: pinned, tags, dishIds: selDishes, startNow, visibility, scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined },
+              startNow
+                ? "Вы в эфире! Откройте страницу эфира и включите камеру."
+                : visibility === "private"
+                  ? "Индивидуальный эфир создан — личная ссылка в списке справа."
+                  : "Эфир запланирован"
             );
-            if (ok) { setTitle(""); setPinned(""); setTags(""); setSelDishes([]); }
+            if (ok) { setTitle(""); setPinned(""); setTags(""); setSelDishes([]); setVisibility("public"); }
           }}
           className="btn-primary w-full"
         >
@@ -429,25 +450,54 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
               <span className={`chip px-2 py-0.5 text-[10px] ${s.status === "live" ? "bg-red-600 text-white" : s.status === "scheduled" ? "bg-amber-100 text-amber-700" : "bg-stone-100 text-stone-500"}`}>
                 {s.status === "live" ? "LIVE" : s.status === "scheduled" ? "ПЛАН" : "АРХИВ"}
               </span>
+              {s.visibility === "private" && <span className="chip bg-orange-100 px-2 py-0.5 text-[10px] text-orange-700">ИНДИВИД.</span>}
               <div className="min-w-0 flex-1">
                 <Link href={`/streams/${s.id}`} className="font-bold hover:text-orange-600">{s.title}</Link>
                 <p className="text-xs text-stone-400">
                   {s.status === "live" ? `в эфире · ${s.viewers} зрит.` : s.status === "scheduled" ? `запланирован: ${s.scheduledAt ? fmtDateTime(s.scheduledAt) : "—"}` : "завершён"}
                 </p>
               </div>
+              {s.status === "live" && (
+                <Link href={`/streams/${s.id}`} className="btn-primary !py-1.5 text-xs">Вещать</Link>
+              )}
               {s.status === "scheduled" && (
-                <button onClick={() => act({ action: "stream_start", id: s.id }, "Вы в эфире!")} className="btn-primary !py-1.5 text-xs">Начать</button>
+                <button onClick={() => act({ action: "stream_start", id: s.id }, "Вы в эфире! Откройте страницу эфира и включите камеру.")} className="btn-primary !py-1.5 text-xs">Начать</button>
               )}
               {s.status === "live" && (
                 <button onClick={() => act({ action: "stream_stop", id: s.id }, "Эфир завершён")} className="btn-danger !py-1.5 text-xs">Завершить</button>
               )}
             </div>
+            {s.visibility === "private" && s.status !== "ended" && <ShareLink streamId={s.id} accessKey={s.accessKey} />}
             {s.status === "live" && <PinEditor streamId={s.id} current={s.pinnedMessage} act={act} />}
           </div>
         ))}
         {streams.length === 0 && <p className="text-sm text-stone-500">Эфиров ещё не было. Самое время начать!</p>}
       </div>
       </div>
+    </div>
+  );
+}
+
+function ShareLink({ streamId, accessKey }: { streamId: number; accessKey: string }) {
+  const [copied, setCopied] = useState(false);
+  const link = () => `${window.location.origin}/streams/${streamId}?key=${encodeURIComponent(accessKey)}`;
+  const copy = async () => {
+    try {
+      await navigator.clipboard.writeText(link());
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      window.prompt("Скопируйте личную ссылку:", link());
+    }
+  };
+  return (
+    <div className="mt-3 flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-2">
+      <p className="min-w-0 flex-1 truncate text-xs text-orange-700">
+        Личная ссылка: /streams/{streamId}?key={accessKey}
+      </p>
+      <button onClick={copy} className="btn-secondary shrink-0 !py-1 text-[11px]">
+        {copied ? "Скопировано" : "Копировать"}
+      </button>
     </div>
   );
 }

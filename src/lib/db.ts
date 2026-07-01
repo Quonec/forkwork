@@ -76,7 +76,19 @@ CREATE TABLE IF NOT EXISTS streams (
   recipe_id INTEGER,
   pinned_message TEXT NOT NULL DEFAULT '',
   tags TEXT NOT NULL DEFAULT '',
-  bot_cursor INTEGER NOT NULL DEFAULT 0
+  bot_cursor INTEGER NOT NULL DEFAULT 0,
+  visibility TEXT NOT NULL DEFAULT 'public',
+  access_key TEXT NOT NULL DEFAULT '',
+  camera_live INTEGER NOT NULL DEFAULT 0
+);
+CREATE TABLE IF NOT EXISTS rtc_signals (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  stream_id INTEGER NOT NULL,
+  sender TEXT NOT NULL,
+  target TEXT NOT NULL,
+  type TEXT NOT NULL,
+  payload TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS stream_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -350,6 +362,11 @@ function seed(db: DatabaseSync) {
     JSON.stringify([dSushi]), null, "", "суши,япония");
   insStream.run(sofia, "Кимчи с нуля: день первый", "scheduled", inHours(44), null, null, 0,
     JSON.stringify([dRamyeon]), null, "", "корея,ферментация");
+  // Индивидуальный (приватный) эфир — доступ только по личной ссылке с ключом
+  db.prepare(
+    "INSERT INTO streams (chef_id, title, status, scheduled_at, viewers, dish_ids, recipe_id, pinned_message, tags, visibility, access_key) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
+  ).run(marco, "Индивидуальный мастер-класс: паста для своих", "scheduled", inHours(6), 0,
+    JSON.stringify([dCarbonara]), rCarbonara, "Закрытый эфир — вход по личной ссылке от повара", "паста,индивидуально", "private", "MARCO-VIP");
 
   // --- сообщения в стримах ---
   const insSMsg = db.prepare(
@@ -527,6 +544,17 @@ function open(): DatabaseSync {
   db.exec("PRAGMA busy_timeout = 8000;");
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec(SCHEMA);
+  // Догоняющая миграция для БД, созданных до появления приватных эфиров.
+  // Гонка параллельных процессов (`duplicate column`) безопасно игнорируется.
+  for (const ddl of [
+    "ALTER TABLE streams ADD COLUMN visibility TEXT NOT NULL DEFAULT 'public'",
+    "ALTER TABLE streams ADD COLUMN access_key TEXT NOT NULL DEFAULT ''",
+    "ALTER TABLE streams ADD COLUMN camera_live INTEGER NOT NULL DEFAULT 0",
+  ]) {
+    try {
+      db.exec(ddl);
+    } catch {}
+  }
   // Сид первого запуска: защищён от гонок параллельных процессов (например, воркеров next build)
   for (let attempt = 0; ; attempt++) {
     try {

@@ -1,3 +1,4 @@
+import crypto from "node:crypto";
 import { db, nowIso } from "@/lib/db";
 import { json, err, requireUser, isResponse } from "@/lib/api";
 import { listChefReviews } from "@/lib/queries";
@@ -33,7 +34,8 @@ export async function GET() {
     db
       .prepare(
         `SELECT id, title, status, scheduled_at AS scheduledAt, started_at AS startedAt, viewers,
-          dish_ids AS dishIds, pinned_message AS pinnedMessage FROM streams WHERE chef_id = ?
+          dish_ids AS dishIds, pinned_message AS pinnedMessage,
+          visibility, access_key AS accessKey FROM streams WHERE chef_id = ?
          ORDER BY CASE status WHEN 'live' THEN 0 WHEN 'scheduled' THEN 1 ELSE 2 END, id DESC`
       )
       .all(chefId)
@@ -171,13 +173,17 @@ export async function POST(req: Request) {
       if (!title) return err("Название эфира обязательно");
       const dishIds = Array.isArray(body.dishIds) ? body.dishIds.map(Number).filter(Boolean) : [];
       const startNow = !!body.startNow;
-      db.prepare(
-        "INSERT INTO streams (chef_id, title, status, scheduled_at, started_at, viewers, dish_ids, pinned_message, tags) VALUES (?,?,?,?,?,?,?,?,?)"
+      // Индивидуальный эфир: скрыт из каталога, вход только по ссылке с ключом
+      const visibility = body.visibility === "private" ? "private" : "public";
+      const accessKey = visibility === "private" ? crypto.randomBytes(6).toString("base64url") : "";
+      const res = db.prepare(
+        "INSERT INTO streams (chef_id, title, status, scheduled_at, started_at, viewers, dish_ids, pinned_message, tags, visibility, access_key) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
       ).run(chefId, title, startNow ? "live" : "scheduled",
         startNow ? null : String(body.scheduledAt ?? nowIso()),
         startNow ? t : null, startNow ? 1 : 0, JSON.stringify(dishIds),
-        String(body.pinnedMessage ?? "").slice(0, 300), String(body.tags ?? "").slice(0, 200));
-      return json({ ok: true });
+        String(body.pinnedMessage ?? "").slice(0, 300), String(body.tags ?? "").slice(0, 200),
+        visibility, accessKey);
+      return json({ ok: true, streamId: Number(res.lastInsertRowid), visibility, accessKey });
     }
     case "stream_start": {
       db.prepare(
@@ -186,8 +192,9 @@ export async function POST(req: Request) {
       return json({ ok: true });
     }
     case "stream_stop": {
-      db.prepare("UPDATE streams SET status = 'ended', ended_at = ? WHERE id = ? AND chef_id = ?").run(
+      db.prepare("UPDATE streams SET status = 'ended', ended_at = ?, camera_live = 0 WHERE id = ? AND chef_id = ?").run(
         t, Number(body.id), chefId);
+      db.prepare("DELETE FROM rtc_signals WHERE stream_id = ?").run(Number(body.id));
       return json({ ok: true });
     }
     case "stream_pin": {

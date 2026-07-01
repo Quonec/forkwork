@@ -1,0 +1,319 @@
+"use client";
+
+import { useCallback, useEffect, useRef, useState } from "react";
+import { fmtDateTime } from "@/lib/format";
+
+// Живое видео эфира. Повар (host) вещает камеру через WebRTC peer-to-peer,
+// зрители подключаются к нему напрямую; сигналинг — HTTP-поллинг /rtc.
+
+type Signal = { sender: string; type: string; payload: string };
+
+const ICE_SERVERS: RTCConfiguration = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+const POLL_MS = 2000;
+
+type Peer = { pc: RTCPeerConnection; iceQueue: RTCIceCandidateInit[]; hasRemote: boolean };
+
+export default function LiveVideo({
+  streamId,
+  title,
+  status,
+  scheduledAt,
+  isChef,
+  viewerKey,
+}: {
+  streamId: number;
+  title: string;
+  status: string;
+  scheduledAt: string | null;
+  isChef: boolean;
+  viewerKey: string;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const localStreamRef = useRef<MediaStream | null>(null);
+  const peersRef = useRef<Map<string, Peer>>(new Map());
+  const peerIdRef = useRef<string>("");
+  const joinedRef = useRef(false);
+
+  const [broadcasting, setBroadcasting] = useState(false);
+  const [starting, setStarting] = useState(false);
+  const [cameraLive, setCameraLive] = useState(false);
+  const [playing, setPlaying] = useState(false);
+  const [viewersConnected, setViewersConnected] = useState(0);
+  const [error, setError] = useState("");
+  const isLive = status === "live";
+
+  const rtcUrl = `/api/streams/${streamId}/rtc`;
+  const keyParam = viewerKey ? `&key=${encodeURIComponent(viewerKey)}` : "";
+
+  const post = useCallback(
+    (msg: { type: string; target?: string; payload?: string }) =>
+      fetch(rtcUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...msg, peerId: peerIdRef.current, key: viewerKey }),
+      }).catch(() => {}),
+    [rtcUrl, viewerKey]
+  );
+
+  const closePeers = useCallback(() => {
+    peersRef.current.forEach((p) => p.pc.close());
+    peersRef.current.clear();
+    setViewersConnected(0);
+  }, []);
+
+  const applyIce = (peer: Peer, payload: string) => {
+    const cand = JSON.parse(payload) as RTCIceCandidateInit;
+    if (peer.hasRemote) peer.pc.addIceCandidate(cand).catch(() => {});
+    else peer.iceQueue.push(cand);
+  };
+
+  const flushIce = (peer: Peer) => {
+    peer.hasRemote = true;
+    for (const c of peer.iceQueue) peer.pc.addIceCandidate(c).catch(() => {});
+    peer.iceQueue = [];
+  };
+
+  // ---------- ПОВАР: вещание ----------
+  const startBroadcast = async () => {
+    setError("");
+    if (!navigator.mediaDevices?.getUserMedia) {
+      setError("Браузер не поддерживает камеру. Нужен HTTPS или localhost.");
+      return;
+    }
+    setStarting(true);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+        audio: true,
+      });
+      localStreamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.muted = true; // локальный предпросмотр без эха
+      }
+      peerIdRef.current = "host";
+      await post({ type: "camera", payload: "1" });
+      setBroadcasting(true);
+      setPlaying(true);
+    } catch (e) {
+      const name = e instanceof DOMException ? e.name : "";
+      setError(
+        name === "NotAllowedError"
+          ? "Доступ к камере запрещён — разрешите его в браузере."
+          : name === "NotFoundError"
+            ? "Камера не найдена."
+            : `Не удалось включить камеру${e instanceof Error ? `: ${e.message}` : ""}.`
+      );
+    } finally {
+      setStarting(false);
+    }
+  };
+
+  const stopBroadcast = useCallback(() => {
+    post({ type: "camera", payload: "0" });
+    closePeers();
+    localStreamRef.current?.getTracks().forEach((t) => t.stop());
+    localStreamRef.current = null;
+    if (videoRef.current) videoRef.current.srcObject = null;
+    setBroadcasting(false);
+    setPlaying(false);
+  }, [post, closePeers]);
+
+  const hostHandleSignal = useCallback(
+    async (s: Signal) => {
+      const local = localStreamRef.current;
+      if (!local) return;
+      if (s.type === "join") {
+        peersRef.current.get(s.sender)?.pc.close();
+        const pc = new RTCPeerConnection(ICE_SERVERS);
+        const peer: Peer = { pc, iceQueue: [], hasRemote: false };
+        peersRef.current.set(s.sender, peer);
+        local.getTracks().forEach((t) => pc.addTrack(t, local));
+        pc.onicecandidate = (e) => {
+          if (e.candidate) post({ type: "ice", target: s.sender, payload: JSON.stringify(e.candidate.toJSON()) });
+        };
+        pc.onconnectionstatechange = () => {
+          if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
+            peersRef.current.delete(s.sender);
+          }
+          setViewersConnected(
+            [...peersRef.current.values()].filter((p) => p.pc.connectionState === "connected").length
+          );
+        };
+        const offer = await pc.createOffer();
+        await pc.setLocalDescription(offer);
+        await post({ type: "offer", target: s.sender, payload: JSON.stringify(offer) });
+      } else if (s.type === "answer") {
+        const peer = peersRef.current.get(s.sender);
+        if (!peer) return;
+        await peer.pc.setRemoteDescription(JSON.parse(s.payload));
+        flushIce(peer);
+      } else if (s.type === "ice") {
+        const peer = peersRef.current.get(s.sender);
+        if (peer) applyIce(peer, s.payload);
+      } else if (s.type === "leave") {
+        peersRef.current.get(s.sender)?.pc.close();
+        peersRef.current.delete(s.sender);
+      }
+    },
+    [post]
+  );
+
+  // ---------- ЗРИТЕЛЬ: приём ----------
+  const viewerHandleSignal = useCallback(
+    async (s: Signal) => {
+      if (s.type === "offer") {
+        peersRef.current.get("host")?.pc.close();
+        const pc = new RTCPeerConnection(ICE_SERVERS);
+        const peer: Peer = { pc, iceQueue: [], hasRemote: false };
+        peersRef.current.set("host", peer);
+        pc.ontrack = (e) => {
+          if (videoRef.current && e.streams[0]) {
+            videoRef.current.srcObject = e.streams[0];
+            videoRef.current.muted = false;
+            setPlaying(true);
+          }
+        };
+        pc.onicecandidate = (e) => {
+          if (e.candidate) post({ type: "ice", payload: JSON.stringify(e.candidate.toJSON()) });
+        };
+        pc.onconnectionstatechange = () => {
+          if (["failed", "closed"].includes(pc.connectionState)) {
+            peersRef.current.delete("host");
+            joinedRef.current = false;
+            setPlaying(false);
+          }
+        };
+        await pc.setRemoteDescription(JSON.parse(s.payload));
+        flushIce(peer);
+        const answer = await pc.createAnswer();
+        await pc.setLocalDescription(answer);
+        await post({ type: "answer", payload: JSON.stringify(answer) });
+      } else if (s.type === "ice") {
+        const peer = peersRef.current.get("host");
+        if (peer) applyIce(peer, s.payload);
+      }
+    },
+    [post]
+  );
+
+  // ---------- Общий поллинг сигналинга ----------
+  useEffect(() => {
+    if (!isLive) return;
+    if (!peerIdRef.current && !isChef) {
+      peerIdRef.current = `v-${Math.random().toString(36).slice(2, 10)}`;
+    }
+    let stopped = false;
+
+    const tick = async () => {
+      if (stopped) return;
+      try {
+        const res = await fetch(`${rtcUrl}?peerId=${encodeURIComponent(peerIdRef.current || "host")}${keyParam}`);
+        if (!res.ok) return;
+        const data = (await res.json()) as { signals: Signal[]; cameraLive: number; status: string };
+        setCameraLive(!!data.cameraLive);
+
+        if (isChef) {
+          if (localStreamRef.current) for (const s of data.signals) await hostHandleSignal(s);
+        } else {
+          // Повар вышел в эфир, а мы ещё не подключены — стучимся
+          if (data.cameraLive && !joinedRef.current) {
+            joinedRef.current = true;
+            await post({ type: "join" });
+          }
+          if (!data.cameraLive && joinedRef.current) {
+            joinedRef.current = false;
+            peersRef.current.get("host")?.pc.close();
+            peersRef.current.delete("host");
+            if (videoRef.current) videoRef.current.srcObject = null;
+            setPlaying(false);
+          }
+          for (const s of data.signals) await viewerHandleSignal(s);
+        }
+      } catch {}
+    };
+
+    tick();
+    const t = setInterval(tick, POLL_MS);
+    return () => {
+      stopped = true;
+      clearInterval(t);
+    };
+  }, [isLive, isChef, rtcUrl, keyParam, hostHandleSignal, viewerHandleSignal, post]);
+
+  // Уборка при уходе со страницы
+  useEffect(
+    () => () => {
+      if (peerIdRef.current && peerIdRef.current !== "host") {
+        navigator.sendBeacon?.(
+          rtcUrl,
+          new Blob([JSON.stringify({ type: "leave", peerId: peerIdRef.current, key: viewerKey })], {
+            type: "application/json",
+          })
+        );
+      }
+      peersRef.current.forEach((p) => p.pc.close());
+      peersRef.current.clear();
+      localStreamRef.current?.getTracks().forEach((t) => t.stop());
+    },
+    [rtcUrl, viewerKey]
+  );
+
+  return (
+    <>
+      <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        className={`absolute inset-0 h-full w-full object-cover ${playing ? "" : "hidden"}`}
+      />
+
+      {/* Плейсхолдер, пока нет живого видео */}
+      {!playing && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+          <div className="steam mb-2 text-2xl font-bold text-orange-300/70">
+            <span>~</span>
+            <span>~</span>
+            <span>~</span>
+          </div>
+          <div className="font-display text-7xl font-bold text-orange-300/60">
+            {(title.trim().charAt(0) || "F").toUpperCase()}
+          </div>
+          <p className="mt-4 max-w-md px-6 text-center text-lg font-bold">{title}</p>
+          {!isLive ? (
+            <p className="mt-2 text-sm text-stone-400">
+              {status === "scheduled"
+                ? `Эфир начнётся: ${scheduledAt ? fmtDateTime(scheduledAt) : "скоро"}`
+                : "Эфир завершён. Спасибо, что были с нами!"}
+            </p>
+          ) : isChef ? (
+            <p className="mt-2 text-sm text-stone-400">Камера выключена — зрители видят заставку.</p>
+          ) : cameraLive ? (
+            <p className="mt-2 text-sm text-stone-400">Подключаемся к камере повара…</p>
+          ) : (
+            <p className="mt-2 text-sm text-stone-400">Повар ещё не включил камеру.</p>
+          )}
+        </div>
+      )}
+
+      {/* Панель вещания повара */}
+      {isChef && isLive && (
+        <div className="absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2">
+          {error && <p className="rounded-lg bg-red-600/90 px-3 py-1.5 text-xs font-semibold text-white">{error}</p>}
+          {broadcasting ? (
+            <div className="flex items-center gap-2">
+              <span className="chip bg-black/60 text-white">камера в эфире · зрителей на связи: {viewersConnected}</span>
+              <button onClick={stopBroadcast} className="btn-danger !bg-red-600 !py-1.5 text-xs !text-white hover:!bg-red-700">
+                Выключить камеру
+              </button>
+            </div>
+          ) : (
+            <button onClick={startBroadcast} disabled={starting} className="btn-primary !py-2 text-xs shadow-lg">
+              {starting ? "Включаем камеру…" : "Включить камеру и вещать"}
+            </button>
+          )}
+        </div>
+      )}
+    </>
+  );
+}
