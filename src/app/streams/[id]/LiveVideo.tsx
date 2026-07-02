@@ -37,6 +37,33 @@ function iceServers(): RTCConfiguration {
 }
 
 const POLL_MS = 2000;
+const HDR_END = [13, 10, 13, 10]; // \r\n\r\n — конец заголовков части multipart
+
+function indexOfSeq(buf: Uint8Array, seq: number[], from = 0): number {
+  outer: for (let i = from; i <= buf.length - seq.length; i++) {
+    for (let j = 0; j < seq.length; j++) if (buf[i + j] !== seq[j]) continue outer;
+    return i;
+  }
+  return -1;
+}
+
+// Самооценка устройства: сколько зрителей оно готово обслуживать как
+// ретранслятор — по ядрам, памяти и типу сети. 0 — не ретранслируем вовсе
+function relayCapacity(): number {
+  const nav = navigator as Navigator & {
+    deviceMemory?: number;
+    connection?: { effectiveType?: string; saveData?: boolean };
+  };
+  const conn = nav.connection;
+  if (conn?.saveData || conn?.effectiveType === "2g" || conn?.effectiveType === "slow-2g") return 0;
+  const cores = navigator.hardwareConcurrency ?? 4;
+  const mem = nav.deviceMemory ?? 4;
+  let cap = 1;
+  if (cores >= 4 && mem >= 4) cap = 2;
+  if (cores >= 8 && mem >= 8) cap = 3;
+  if (conn?.effectiveType === "3g") cap = Math.min(cap, 1);
+  return cap;
+}
 
 type Peer = { pc: RTCPeerConnection; iceQueue: RTCIceCandidateInit[]; hasRemote: boolean };
 
@@ -84,6 +111,17 @@ export default function LiveVideo({
   const [relayFrame, setRelayFrame] = useState<string | null>(null);
   const [relayAudioOn, setRelayAudioOn] = useState(false);
   const [error, setError] = useState("");
+  // Настройки эфира (повар): частота кадров резервного канала, разрешение, качество JPEG
+  const [cfg, setCfg] = useState({ fps: 25, width: 640, quality: 55 });
+  const [menuOpen, setMenuOpen] = useState(false);
+  // Синхронизация звука и видео у зрителя: кадры задерживаются под отставание звука
+  const [syncOn, setSyncOn] = useState(true);
+  const syncOnRef = useRef(true);
+  syncOnRef.current = syncOn;
+  const relayAudioOnRef = useRef(false);
+  relayAudioOnRef.current = relayAudioOn;
+  const audioDelayMsRef = useRef(0);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
   // Звук резервного канала: скрытый <audio> + MediaSource, сегменты в очередь
   const audioRef = useRef<HTMLAudioElement>(null);
   const audioSeqRef = useRef(0);
@@ -345,8 +383,9 @@ export default function LiveVideo({
 
   // ---------- Резервный канал: повар шлёт JPEG-кадры через сервер ----------
   // Работает параллельно с WebRTC: если у зрителя P2P не пробился (нет TURN),
-  // он смотрит MJPEG-поток с сервера. Целевой темп 25 к/с (тик 40 мс);
-  // при медленной сети или CPU кадры пропускаются, темп проседает плавно.
+  // он смотрит MJPEG-поток с сервера. Темп задаётся в настройках эфира
+  // (до 60 к/с); при медленной сети или CPU кадры пропускаются, темп
+  // проседает плавно без накопления задержки.
   useEffect(() => {
     if (!broadcasting) return;
     const canvas = document.createElement("canvas");
@@ -354,8 +393,8 @@ export default function LiveVideo({
     const t = setInterval(() => {
       const v = videoRef.current;
       if (!v || v.videoWidth === 0 || relayBusyRef.current) return;
-      const w = 640;
-      const h = Math.round((v.videoHeight / v.videoWidth) * w) || 360;
+      const w = cfg.width;
+      const h = Math.round((v.videoHeight / v.videoWidth) * w) || Math.round((w * 9) / 16);
       canvas.width = w;
       canvas.height = h;
       canvas.getContext("2d")?.drawImage(v, 0, 0, w, h);
@@ -376,14 +415,14 @@ export default function LiveVideo({
           }
         },
         "image/jpeg",
-        0.5
+        cfg.quality / 100
       );
-    }, 40);
+    }, Math.max(16, Math.round(1000 / cfg.fps)));
     return () => {
       clearInterval(t);
       fetch(relayUrl, { method: "DELETE" }).catch(() => {});
     };
-  }, [broadcasting, relayUrl, viewerKey]);
+  }, [broadcasting, relayUrl, viewerKey, cfg]);
 
   // Звук резервного канала: повар пишет микрофон самодостаточными сегментами
   // ~1.5 с (каждый — законченный webm-файл) и шлёт их на сервер
@@ -416,9 +455,10 @@ export default function LiveVideo({
         startSegment();
       };
       rec.start();
+      // Короткие сегменты (1 с) — ниже задержка звука и точнее синхронизация
       timer = setTimeout(() => {
         if (rec && rec.state !== "inactive") rec.stop();
-      }, 1500);
+      }, 1000);
     };
 
     startSegment();
@@ -497,10 +537,13 @@ export default function LiveVideo({
           sb.appendBuffer(next as BufferSource);
         } catch {}
       }
-      // Держимся близко к прямому эфиру: отстали больше чем на 4 с — прыгаем
+      // Держимся близко к прямому эфиру: отстали больше чем на 4 с — прыгаем.
+      // Текущее отставание звука запоминаем — на него задерживаются кадры видео
       if (a && a.buffered.length > 0) {
         const end = a.buffered.end(a.buffered.length - 1);
-        if (end - a.currentTime > 4) a.currentTime = end - 0.8;
+        const lag = end - a.currentTime;
+        if (lag > 4) a.currentTime = end - 0.8;
+        audioDelayMsRef.current = Math.min(4000, Math.max(0, lag * 1000 + 700));
       }
     };
 
@@ -558,6 +601,94 @@ export default function LiveVideo({
     return () => clearTimeout(t);
   }, [isChef, relayAvailable, playing, relayMode]);
 
+  // MJPEG-приём: читаем multipart-поток вручную, складываем кадры в очередь
+  // и рисуем на canvas с задержкой, равной отставанию звука, — губы и голос
+  // совпадают. Без звука задержка нулевая (кадр рисуется сразу по приходе).
+  useEffect(() => {
+    if (isChef || playing || !relayAvailable || relayMode !== "mjpeg") return;
+    const ctrl = new AbortController();
+    type QFrame = { bmp: ImageBitmap; t: number };
+    const queue: QFrame[] = [];
+
+    const draw = setInterval(() => {
+      const delay = relayAudioOnRef.current && syncOnRef.current ? audioDelayMsRef.current : 0;
+      const target = performance.now() - delay;
+      let pick = -1;
+      for (let i = queue.length - 1; i >= 0; i--) {
+        if (queue[i].t <= target) {
+          pick = i;
+          break;
+        }
+      }
+      if (pick < 0) return;
+      for (const old of queue.splice(0, pick)) old.bmp.close();
+      const f = queue.shift();
+      if (!f) return;
+      const c = canvasRef.current;
+      if (c) {
+        if (c.width !== f.bmp.width || c.height !== f.bmp.height) {
+          c.width = f.bmp.width;
+          c.height = f.bmp.height;
+        }
+        c.getContext("2d")?.drawImage(f.bmp, 0, 0);
+        mjpegLoadedRef.current = true;
+        setRelayShown(true);
+      }
+      f.bmp.close();
+    }, 33);
+
+    (async () => {
+      try {
+        const res = await fetch(`${relayUrl}?mjpeg=1${keyParam}`, { signal: ctrl.signal });
+        if (!res.ok || !res.body) {
+          setRelayMode("poll");
+          return;
+        }
+        const reader = res.body.getReader();
+        let buf = new Uint8Array(0);
+        const dec = new TextDecoder();
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const merged = new Uint8Array(buf.length + value.length);
+          merged.set(buf);
+          merged.set(value, buf.length);
+          buf = merged;
+          // Выделяем части multipart по Content-Length из заголовков
+          while (true) {
+            const hdrEnd = indexOfSeq(buf, HDR_END);
+            if (hdrEnd < 0) break;
+            const header = dec.decode(buf.subarray(0, hdrEnd));
+            const lenMatch = /Content-Length:\s*(\d+)/i.exec(header);
+            if (!lenMatch) {
+              buf = buf.subarray(hdrEnd + 4);
+              continue;
+            }
+            const len = Number(lenMatch[1]);
+            const start = hdrEnd + 4;
+            if (buf.length < start + len) break;
+            const jpeg = buf.slice(start, start + len);
+            buf = buf.subarray(start + len);
+            createImageBitmap(new Blob([jpeg], { type: "image/jpeg" }))
+              .then((bmp) => {
+                queue.push({ bmp, t: performance.now() });
+                // 400 кадров хватает на ~6 c буфера даже при 60 к/с
+                while (queue.length > 400) queue.shift()?.bmp.close();
+              })
+              .catch(() => {});
+          }
+        }
+      } catch {}
+    })();
+
+    return () => {
+      clearInterval(draw);
+      ctrl.abort();
+      queue.forEach((f) => f.bmp.close());
+      queue.length = 0;
+    };
+  }, [isChef, playing, relayAvailable, relayMode, relayUrl, keyParam]);
+
   // Покадровый фолбэк-поллинг (только когда MJPEG не заработал)
   useEffect(() => {
     if (isChef || !relayAvailable || playing || relayMode !== "poll") return;
@@ -610,10 +741,11 @@ export default function LiveVideo({
         muted
         onPlaying={() => {
           setPlaying(true);
-          // Кадры реально пошли — устройство зрителя готово раздавать поток дальше
+          // Кадры реально пошли — устройство зрителя берёт на себя ретрансляцию
+          // в меру своих возможностей (ядра, память, сеть)
           if (!isChef && remoteStreamRef.current && !relayReadySentRef.current) {
             relayReadySentRef.current = true;
-            post({ type: "relay-ready" });
+            post({ type: "relay-ready", payload: String(relayCapacity()) });
           }
         }}
         className={`absolute inset-0 h-full w-full object-cover ${playing ? "" : "hidden"}`}
@@ -643,18 +775,13 @@ export default function LiveVideo({
         </button>
       )}
 
-      {/* Резервный канал: MJPEG-поток через сервер, пока WebRTC не подключился */}
+      {/* Резервный канал: MJPEG-поток через сервер, пока WebRTC не подключился.
+          Canvas рисует кадры из буфера с задержкой под звук (синхронизация) */}
       {!isChef && !playing && relayAvailable && relayMode === "mjpeg" && (
-        // eslint-disable-next-line @next/next/no-img-element
-        <img
-          src={`${relayUrl}?mjpeg=1${keyParam}`}
-          alt="Эфир повара (резервный канал)"
-          onLoad={() => {
-            mjpegLoadedRef.current = true;
-            setRelayShown(true);
-          }}
-          onError={() => setRelayMode("poll")}
+        <canvas
+          ref={canvasRef}
           className="absolute inset-0 h-full w-full object-cover"
+          style={{ display: relayShown ? undefined : "none" }}
         />
       )}
       {/* Фолбэк: покадровый поллинг, если MJPEG не прошёл через прокси */}
@@ -695,6 +822,102 @@ export default function LiveVideo({
             </p>
           ) : (
             <p className="mt-2 text-sm text-stone-400">Повар ещё не включил камеру.</p>
+          )}
+        </div>
+      )}
+
+      {/* Выпадающее меню настроек стрима */}
+      {isLive && (
+        <div className="absolute right-3 top-3 z-20">
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            className="flex items-center gap-1.5 rounded-lg bg-black/55 px-2.5 py-1.5 text-[11px] font-bold text-white backdrop-blur hover:bg-black/75"
+            title="Настройки стрима"
+          >
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2}>
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.7 1.7 0 0 0 .34 1.87l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.7 1.7 0 0 0-1.87-.34 1.7 1.7 0 0 0-1 1.55V21a2 2 0 1 1-4 0v-.09a1.7 1.7 0 0 0-1.12-1.56 1.7 1.7 0 0 0-1.87.34l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.7 1.7 0 0 0 .34-1.87 1.7 1.7 0 0 0-1.55-1H3a2 2 0 1 1 0-4h.09A1.7 1.7 0 0 0 4.65 8.9a1.7 1.7 0 0 0-.34-1.87l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.7 1.7 0 0 0 1.87.34h.09a1.7 1.7 0 0 0 1-1.55V3a2 2 0 1 1 4 0v.09a1.7 1.7 0 0 0 1 1.55 1.7 1.7 0 0 0 1.87-.34l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.7 1.7 0 0 0-.34 1.87v.09a1.7 1.7 0 0 0 1.55 1H21a2 2 0 1 1 0 4h-.09a1.7 1.7 0 0 0-1.51 1z" />
+            </svg>
+            Настройки
+          </button>
+          {menuOpen && (
+            <div className="mt-2 w-64 space-y-3 rounded-xl bg-black/80 p-3.5 text-white backdrop-blur">
+              {isChef ? (
+                <>
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60">Кадров в секунду</p>
+                    <div className="flex gap-1.5">
+                      {[15, 25, 40, 60].map((f) => (
+                        <button
+                          key={f}
+                          onClick={() => setCfg((c) => ({ ...c, fps: f }))}
+                          className={`flex-1 rounded-lg py-1.5 text-xs font-bold ${cfg.fps === f ? "bg-orange-500 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+                        >
+                          {f}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60">Разрешение</p>
+                    <div className="flex gap-1.5">
+                      {[
+                        [480, "480p"],
+                        [640, "640p"],
+                        [960, "960p"],
+                      ].map(([w, label]) => (
+                        <button
+                          key={w}
+                          onClick={() => setCfg((c) => ({ ...c, width: Number(w) }))}
+                          className={`flex-1 rounded-lg py-1.5 text-xs font-bold ${cfg.width === w ? "bg-orange-500 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <div>
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-white/60">Качество картинки</p>
+                    <div className="flex gap-1.5">
+                      {[
+                        [40, "Эконом"],
+                        [55, "Норма"],
+                        [75, "Высокое"],
+                      ].map(([q, label]) => (
+                        <button
+                          key={q}
+                          onClick={() => setCfg((c) => ({ ...c, quality: Number(q) }))}
+                          className={`flex-1 rounded-lg py-1.5 text-xs font-bold ${cfg.quality === q ? "bg-orange-500 text-white" : "bg-white/10 text-white/80 hover:bg-white/20"}`}
+                        >
+                          {label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  <p className="text-[10px] leading-relaxed text-white/50">
+                    Настройки действуют на серверный канал. При нехватке сети или процессора кадры пропускаются автоматически.
+                  </p>
+                </>
+              ) : (
+                <>
+                  <label className="flex items-center justify-between gap-2 text-xs font-semibold">
+                    Синхронизация звука и видео
+                    <input
+                      type="checkbox"
+                      checked={syncOn}
+                      onChange={(e) => setSyncOn(e.target.checked)}
+                      className="h-4 w-4 accent-orange-500"
+                    />
+                  </label>
+                  <p className="text-[10px] leading-relaxed text-white/50">
+                    Кадры задерживаются под звук, чтобы губы и голос совпадали. Выключите, если важна минимальная задержка картинки.
+                  </p>
+                  <p className="text-[10px] text-white/50">
+                    Канал: {playing ? "прямое P2P-соединение" : relayShown ? "через сервер" : "подключение…"}
+                  </p>
+                </>
+              )}
+            </div>
           )}
         </div>
       )}

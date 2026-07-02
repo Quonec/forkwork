@@ -39,12 +39,12 @@ export default function Footer() {
           <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-stone-400">Важно</h4>
           <p className="text-xs leading-relaxed text-stone-400">
             Платформа не заменяет санитарные и медицинские проверки. Пользователи обязаны соблюдать правила публикации
-            и общения. AI-агент носит вспомогательный характер. Демонстрационная версия — платежи виртуальные (FC).
+            и общения. AI-агент носит вспомогательный характер. Расчёты ведутся во внутренней валюте платформы (FC).
           </p>
         </div>
       </div>
       <div className="border-t border-stone-100 py-4 text-center text-xs text-stone-400">
-        © {new Date().getFullYear()} ForkWork · MVP-демо
+        © {new Date().getFullYear()} ForkWork
       </div>
     </footer>
   );

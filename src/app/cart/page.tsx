@@ -118,7 +118,7 @@ export default function CartPage() {
               {balance !== null && <span className="text-xs opacity-80">баланс: {fmtFC(balance)}</span>}
             </button>
             <button onClick={() => setPayment("card")} className={`btn ${payment === "card" ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-700"}`}>
-              Карта (демо)
+              Карта
             </button>
           </div>
         </div>
