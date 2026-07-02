@@ -8,7 +8,34 @@ import { fmtDateTime } from "@/lib/format";
 
 type Signal = { sender: string; type: string; payload: string };
 
-const ICE_SERVERS: RTCConfiguration = { iceServers: [{ urls: "stun:stun.l.google.com:19302" }] };
+// STUN + TURN: без TURN-ретранслятора P2P через интернет (разные NAT) часто не
+// пробивается — картинка «есть соединение, нет кадров». По умолчанию — публичный
+// бесплатный Open Relay; свой TURN задаётся переменными NEXT_PUBLIC_TURN_*.
+function iceServers(): RTCConfiguration {
+  const servers: RTCIceServer[] = [
+    { urls: ["stun:stun.l.google.com:19302", "stun:stun.cloudflare.com:3478"] },
+  ];
+  const turnUrl = process.env.NEXT_PUBLIC_TURN_URL;
+  if (turnUrl) {
+    servers.push({
+      urls: turnUrl.split(",").map((u) => u.trim()),
+      username: process.env.NEXT_PUBLIC_TURN_USER ?? "",
+      credential: process.env.NEXT_PUBLIC_TURN_PASS ?? "",
+    });
+  } else {
+    servers.push({
+      urls: [
+        "turn:openrelay.metered.ca:80",
+        "turn:openrelay.metered.ca:443",
+        "turns:openrelay.metered.ca:443?transport=tcp",
+      ],
+      username: "openrelayproject",
+      credential: "openrelayproject",
+    });
+  }
+  return { iceServers: servers };
+}
+
 const POLL_MS = 2000;
 
 type Peer = { pc: RTCPeerConnection; iceQueue: RTCIceCandidateInit[]; hasRemote: boolean };
@@ -130,7 +157,7 @@ export default function LiveVideo({
       if (!local) return;
       if (s.type === "join") {
         peersRef.current.get(s.sender)?.pc.close();
-        const pc = new RTCPeerConnection(ICE_SERVERS);
+        const pc = new RTCPeerConnection(iceServers());
         const peer: Peer = { pc, iceQueue: [], hasRemote: false };
         peersRef.current.set(s.sender, peer);
         local.getTracks().forEach((t) => pc.addTrack(t, local));
@@ -169,17 +196,18 @@ export default function LiveVideo({
     async (s: Signal) => {
       if (s.type === "offer") {
         peersRef.current.get("host")?.pc.close();
-        const pc = new RTCPeerConnection(ICE_SERVERS);
+        const pc = new RTCPeerConnection(iceServers());
         const peer: Peer = { pc, iceQueue: [], hasRemote: false };
         peersRef.current.set("host", peer);
         pc.ontrack = (e) => {
           if (videoRef.current && e.streams[0]) {
             // Автоплей разрешён только без звука — стартуем приглушённо,
-            // звук зритель включает кнопкой (жест пользователя)
+            // звук зритель включает кнопкой (жест пользователя).
+            // setPlaying здесь не зовём: видео покажем по факту прихода кадров
+            // (событие onPlaying на элементе), а не по факту получения трека
             videoRef.current.srcObject = e.streams[0];
             videoRef.current.muted = true;
             setMuted(true);
-            setPlaying(true);
             videoRef.current.play().catch(() => {});
           }
         };
@@ -188,6 +216,7 @@ export default function LiveVideo({
         };
         pc.onconnectionstatechange = () => {
           if (["failed", "closed"].includes(pc.connectionState)) {
+            pc.close();
             peersRef.current.delete("host");
             joinSentAtRef.current = 0; // следующий тик поллинга переподключится
             setPlaying(false);
@@ -285,6 +314,7 @@ export default function LiveVideo({
         autoPlay
         playsInline
         muted
+        onPlaying={() => setPlaying(true)}
         className={`absolute inset-0 h-full w-full object-cover ${playing ? "" : "hidden"}`}
       />
 
@@ -325,7 +355,10 @@ export default function LiveVideo({
           ) : isChef ? (
             <p className="mt-2 text-sm text-stone-400">Камера выключена — зрители видят заставку.</p>
           ) : cameraLive ? (
-            <p className="mt-2 text-sm text-stone-400">Подключаемся к камере повара…</p>
+            <p className="mt-2 max-w-sm px-6 text-center text-sm text-stone-400">
+              Подключаемся к камере повара… Обычно это занимает 5–15 секунд;
+              при сложной сети видео пойдёт через TURN-ретранслятор.
+            </p>
           ) : (
             <p className="mt-2 text-sm text-stone-400">Повар ещё не включил камеру.</p>
           )}
