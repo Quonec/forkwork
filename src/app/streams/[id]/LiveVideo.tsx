@@ -32,12 +32,14 @@ export default function LiveVideo({
   const localStreamRef = useRef<MediaStream | null>(null);
   const peersRef = useRef<Map<string, Peer>>(new Map());
   const peerIdRef = useRef<string>("");
-  const joinedRef = useRef(false);
+  const joinSentAtRef = useRef(0);
+  const broadcastingRef = useRef(false);
 
   const [broadcasting, setBroadcasting] = useState(false);
   const [starting, setStarting] = useState(false);
   const [cameraLive, setCameraLive] = useState(false);
   const [playing, setPlaying] = useState(false);
+  const [muted, setMuted] = useState(true);
   const [viewersConnected, setViewersConnected] = useState(0);
   const [error, setError] = useState("");
   const isLive = status === "live";
@@ -93,8 +95,10 @@ export default function LiveVideo({
       }
       peerIdRef.current = "host";
       await post({ type: "camera", payload: "1" });
+      broadcastingRef.current = true;
       setBroadcasting(true);
       setPlaying(true);
+      videoRef.current?.play().catch(() => {});
     } catch (e) {
       const name = e instanceof DOMException ? e.name : "";
       setError(
@@ -115,6 +119,7 @@ export default function LiveVideo({
     localStreamRef.current?.getTracks().forEach((t) => t.stop());
     localStreamRef.current = null;
     if (videoRef.current) videoRef.current.srcObject = null;
+    broadcastingRef.current = false;
     setBroadcasting(false);
     setPlaying(false);
   }, [post, closePeers]);
@@ -169,9 +174,13 @@ export default function LiveVideo({
         peersRef.current.set("host", peer);
         pc.ontrack = (e) => {
           if (videoRef.current && e.streams[0]) {
+            // Автоплей разрешён только без звука — стартуем приглушённо,
+            // звук зритель включает кнопкой (жест пользователя)
             videoRef.current.srcObject = e.streams[0];
-            videoRef.current.muted = false;
+            videoRef.current.muted = true;
+            setMuted(true);
             setPlaying(true);
+            videoRef.current.play().catch(() => {});
           }
         };
         pc.onicecandidate = (e) => {
@@ -180,7 +189,7 @@ export default function LiveVideo({
         pc.onconnectionstatechange = () => {
           if (["failed", "closed"].includes(pc.connectionState)) {
             peersRef.current.delete("host");
-            joinedRef.current = false;
+            joinSentAtRef.current = 0; // следующий тик поллинга переподключится
             setPlaying(false);
           }
         };
@@ -208,6 +217,10 @@ export default function LiveVideo({
     const tick = async () => {
       if (stopped) return;
       try {
+        // Повар до включения камеры к ящику не прикасается — иначе он бы
+        // «съедал» join-сигналы зрителей, пришедшие раньше времени
+        if (isChef && !broadcastingRef.current) return;
+
         const res = await fetch(`${rtcUrl}?peerId=${encodeURIComponent(peerIdRef.current || "host")}${keyParam}`);
         if (!res.ok) return;
         const data = (await res.json()) as { signals: Signal[]; cameraLive: number; status: string };
@@ -216,17 +229,23 @@ export default function LiveVideo({
         if (isChef) {
           if (localStreamRef.current) for (const s of data.signals) await hostHandleSignal(s);
         } else {
-          // Повар вышел в эфир, а мы ещё не подключены — стучимся
-          if (data.cameraLive && !joinedRef.current) {
-            joinedRef.current = true;
-            await post({ type: "join" });
-          }
-          if (!data.cameraLive && joinedRef.current) {
-            joinedRef.current = false;
-            peersRef.current.get("host")?.pc.close();
-            peersRef.current.delete("host");
-            if (videoRef.current) videoRef.current.srcObject = null;
-            setPlaying(false);
+          if (data.cameraLive) {
+            // Камера повара в эфире, а соединения нет — стучимся;
+            // повторяем join каждые ~8 секунд, пока не получим оффер
+            const pc = peersRef.current.get("host")?.pc;
+            const connected = pc && ["connected", "connecting"].includes(pc.connectionState);
+            if (!connected && Date.now() - joinSentAtRef.current > 8000) {
+              joinSentAtRef.current = Date.now();
+              await post({ type: "join" });
+            }
+          } else {
+            joinSentAtRef.current = 0;
+            if (peersRef.current.has("host")) {
+              peersRef.current.get("host")?.pc.close();
+              peersRef.current.delete("host");
+              if (videoRef.current) videoRef.current.srcObject = null;
+              setPlaying(false);
+            }
           }
           for (const s of data.signals) await viewerHandleSignal(s);
         }
@@ -265,8 +284,25 @@ export default function LiveVideo({
         ref={videoRef}
         autoPlay
         playsInline
+        muted
         className={`absolute inset-0 h-full w-full object-cover ${playing ? "" : "hidden"}`}
       />
+
+      {/* Зритель смотрит: звук включается жестом — иначе браузер заблокирует автоплей */}
+      {!isChef && playing && muted && (
+        <button
+          onClick={() => {
+            if (videoRef.current) {
+              videoRef.current.muted = false;
+              videoRef.current.play().catch(() => {});
+            }
+            setMuted(false);
+          }}
+          className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-xl bg-black/65 px-4 py-2 text-xs font-bold text-white backdrop-blur hover:bg-black/80"
+        >
+          Включить звук
+        </button>
+      )}
 
       {/* Плейсхолдер, пока нет живого видео */}
       {!playing && (
