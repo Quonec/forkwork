@@ -28,7 +28,7 @@ export async function POST(req: Request) {
     if (amount > TOPUP_LIMIT) return err(`Максимум за одну операцию — ${TOPUP_LIMIT.toLocaleString("ru-RU")} FC`);
     db.prepare("UPDATE wallets SET balance = balance + ? WHERE user_id = ?").run(amount, user.id);
     db.prepare("INSERT INTO transactions (user_id, type, amount, comment, ref, created_at) VALUES (?,?,?,?,?,?)").run(
-      user.id, "topup", amount, "Пополнение кошелька (демо-платёж)", "", t
+      user.id, "topup", amount, "Пополнение кошелька", "", t
     );
     return json({ ok: true });
   }

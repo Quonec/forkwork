@@ -22,8 +22,10 @@ const SIGNAL_TTL_MS = 2 * 60_000;
 const STALE_PEER_MS = 10_000;
 const MAX_CHILDREN = 3;
 
-// Реестр живых участников дерева (в памяти процесса)
-type MeshPeer = { relay: boolean; lastSeen: number };
+// Реестр живых участников дерева (в памяти процесса).
+// capacity — сколько детей узел готов обслуживать: зритель сам оценивает свои
+// возможности (ядра, память, тип сети) и сообщает их вместе с relay-ready
+type MeshPeer = { relay: boolean; lastSeen: number; capacity: number };
 type Mesh = { peers: Map<string, MeshPeer>; parent: Map<string, string> };
 const meshes = ((globalThis as unknown as { __fwMesh?: Map<number, Mesh> }).__fwMesh ??= new Map<
   number,
@@ -66,7 +68,7 @@ function pickParent(m: Mesh, joiningPeer: string): string {
   for (const [pid, p] of m.peers) {
     if (pid === "host" || pid === joiningPeer || !p.relay) continue;
     const c = childCount(m, pid);
-    if (c < MAX_CHILDREN && c < bestChildren) {
+    if (c < p.capacity && c < bestChildren) {
       best = pid;
       bestChildren = c;
     }
@@ -115,7 +117,11 @@ export async function GET(req: Request, ctx: { params: Promise<{ id: string }> }
   // Отмечаемся живыми в реестре дерева
   const m = meshOf(stream.id);
   const prev = m.peers.get(peerId);
-  m.peers.set(peerId, { relay: peerId === "host" ? true : (prev?.relay ?? false), lastSeen: Date.now() });
+  m.peers.set(peerId, {
+    relay: peerId === "host" ? true : (prev?.relay ?? false),
+    lastSeen: Date.now(),
+    capacity: prev?.capacity ?? (peerId === "host" ? MAX_CHILDREN : 0),
+  });
 
   db.prepare("DELETE FROM rtc_signals WHERE created_at < ?").run(
     new Date(Date.now() - SIGNAL_TTL_MS).toISOString()
@@ -183,15 +189,23 @@ export async function POST(req: Request, ctx: { params: Promise<{ id: string }> 
   switch (type) {
     case "join": {
       // Сервер выбирает родителя: повар или зритель-ретранслятор со свободным слотом
-      m.peers.set(peerId, { relay: m.peers.get(peerId)?.relay ?? false, lastSeen: Date.now() });
+      const prev = m.peers.get(peerId);
+      m.peers.set(peerId, {
+        relay: prev?.relay ?? false,
+        lastSeen: Date.now(),
+        capacity: prev?.capacity ?? 0,
+      });
       const parent = pickParent(m, peerId);
       m.parent.set(peerId, parent);
       pushSignal(stream.id, peerId, parent, "join", "");
       return json({ ok: true, parent });
     }
     case "relay-ready": {
-      // Видео дошло — устройство зрителя готово раздавать дальше
-      m.peers.set(peerId, { relay: true, lastSeen: Date.now() });
+      // Видео дошло — устройство зрителя готово раздавать дальше.
+      // payload — самооценка ёмкости устройства (0–4 ребёнка; 0 = не ретранслирует)
+      const n = Number(payload);
+      const capacity = Number.isFinite(n) ? Math.max(0, Math.min(4, Math.round(n))) : 1;
+      m.peers.set(peerId, { relay: capacity > 0, lastSeen: Date.now(), capacity });
       return json({ ok: true });
     }
     case "answer":

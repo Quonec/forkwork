@@ -67,7 +67,7 @@ export default function LoginPage() {
       </form>
 
       <div className="card mt-4 p-4">
-        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Демо-аккаунты</p>
+        <p className="mb-2 text-xs font-bold uppercase tracking-wide text-stone-400">Быстрый вход</p>
         <div className="space-y-1.5">
           {DEMO.map(([em, pw, label]) => (
             <button
