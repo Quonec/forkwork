@@ -82,11 +82,19 @@ export default function LiveVideo({
   const [relayMode, setRelayMode] = useState<"mjpeg" | "poll">("mjpeg");
   const [relayShown, setRelayShown] = useState(false);
   const [relayFrame, setRelayFrame] = useState<string | null>(null);
+  const [relayAudioOn, setRelayAudioOn] = useState(false);
   const [error, setError] = useState("");
+  // Звук резервного канала: скрытый <audio> + MediaSource, сегменты в очередь
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const audioSeqRef = useRef(0);
+  const msRef = useRef<MediaSource | null>(null);
+  const sbRef = useRef<SourceBuffer | null>(null);
+  const audioQueueRef = useRef<Uint8Array[]>([]);
   const isLive = status === "live";
 
   const rtcUrl = `/api/streams/${streamId}/rtc`;
   const relayUrl = `/api/streams/${streamId}/relay`;
+  const audioUrl = `/api/streams/${streamId}/audio`;
   const keyParam = viewerKey ? `&key=${encodeURIComponent(viewerKey)}` : "";
 
   const post = useCallback(
@@ -377,6 +385,53 @@ export default function LiveVideo({
     };
   }, [broadcasting, relayUrl, viewerKey]);
 
+  // Звук резервного канала: повар пишет микрофон самодостаточными сегментами
+  // ~1.5 с (каждый — законченный webm-файл) и шлёт их на сервер
+  useEffect(() => {
+    if (!broadcasting) return;
+    const tracks = localStreamRef.current?.getAudioTracks() ?? [];
+    if (tracks.length === 0 || typeof MediaRecorder === "undefined") return;
+    const mime = ["audio/webm;codecs=opus", "audio/webm", "audio/mp4"].find((m) =>
+      MediaRecorder.isTypeSupported(m)
+    );
+    if (!mime) return;
+    const audioStream = new MediaStream(tracks);
+    const postUrl = `${audioUrl}?mime=${encodeURIComponent(mime)}${viewerKey ? `&key=${encodeURIComponent(viewerKey)}` : ""}`;
+    let stopped = false;
+    let rec: MediaRecorder | null = null;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+
+    const startSegment = () => {
+      if (stopped) return;
+      const parts: BlobPart[] = [];
+      rec = new MediaRecorder(audioStream, { mimeType: mime, audioBitsPerSecond: 64_000 });
+      rec.ondataavailable = (e) => {
+        if (e.data.size > 0) parts.push(e.data);
+      };
+      rec.onstop = async () => {
+        const blob = new Blob(parts, { type: mime });
+        try {
+          if (blob.size > 0 && !stopped) await fetch(postUrl, { method: "POST", body: blob });
+        } catch {}
+        startSegment();
+      };
+      rec.start();
+      timer = setTimeout(() => {
+        if (rec && rec.state !== "inactive") rec.stop();
+      }, 1500);
+    };
+
+    startSegment();
+    return () => {
+      stopped = true;
+      clearTimeout(timer);
+      try {
+        if (rec && rec.state !== "inactive") rec.stop();
+      } catch {}
+      fetch(audioUrl, { method: "DELETE" }).catch(() => {});
+    };
+  }, [broadcasting, audioUrl, viewerKey]);
+
   // Зритель: проверяем доступность резервного канала, пока WebRTC-видео не пошло
   useEffect(() => {
     if (isChef || !isLive) return;
@@ -404,6 +459,93 @@ export default function LiveVideo({
       clearInterval(t);
     };
   }, [isChef, isLive, cameraLive, playing, relayUrl, keyParam]);
+
+  // Звук резервного канала у зрителя: включается кнопкой (жест пользователя),
+  // сегменты подшиваются в SourceBuffer в режиме sequence — непрерывный поток
+  const startRelayAudio = () => {
+    const a = audioRef.current;
+    if (!a || typeof MediaSource === "undefined") return;
+    const ms = new MediaSource();
+    msRef.current = ms;
+    sbRef.current = null;
+    audioQueueRef.current = [];
+    audioSeqRef.current = 0;
+    a.src = URL.createObjectURL(ms);
+    a.muted = false;
+    a.play().catch(() => {}); // вызов внутри клика — автоплей разрешён
+    setRelayAudioOn(true);
+  };
+
+  useEffect(() => {
+    if (isChef || !relayAudioOn || playing || !cameraLive) {
+      if (relayAudioOn && (playing || !cameraLive)) {
+        // WebRTC подхватил звук или эфир камеры кончился — резервный звук не нужен
+        audioRef.current?.pause();
+        setRelayAudioOn(false);
+      }
+      return;
+    }
+    let stopped = false;
+
+    const drain = () => {
+      const sb = sbRef.current;
+      const a = audioRef.current;
+      if (!sb || sb.updating) return;
+      const next = audioQueueRef.current.shift();
+      if (next) {
+        try {
+          sb.appendBuffer(next as BufferSource);
+        } catch {}
+      }
+      // Держимся близко к прямому эфиру: отстали больше чем на 4 с — прыгаем
+      if (a && a.buffered.length > 0) {
+        const end = a.buffered.end(a.buffered.length - 1);
+        if (end - a.currentTime > 4) a.currentTime = end - 0.8;
+      }
+    };
+
+    const ensureSourceBuffer = (mime: string) => {
+      const ms = msRef.current;
+      if (sbRef.current || !ms || ms.readyState !== "open") return;
+      if (!MediaSource.isTypeSupported(mime)) return;
+      const sb = ms.addSourceBuffer(mime);
+      sb.mode = "sequence"; // сегменты независимы — таймлайн склеивается автоматически
+      sb.addEventListener("updateend", drain);
+      sbRef.current = sb;
+    };
+
+    const loop = async () => {
+      while (!stopped) {
+        try {
+          const res = await fetch(`${audioUrl}?since=${audioSeqRef.current}${keyParam}`);
+          if (stopped) return;
+          if (res.status === 200) {
+            const seq = Number(res.headers.get("X-Seq") ?? 0);
+            const mime = res.headers.get("X-Mime") ?? "audio/webm";
+            const buf = new Uint8Array(await res.arrayBuffer());
+            if (seq > 0) audioSeqRef.current = seq;
+            ensureSourceBuffer(mime);
+            audioQueueRef.current.push(buf);
+            drain();
+          } else {
+            await new Promise((r) => setTimeout(r, 700));
+          }
+        } catch {
+          await new Promise((r) => setTimeout(r, 1200));
+        }
+      }
+    };
+    loop();
+
+    return () => {
+      stopped = true;
+      try {
+        if (msRef.current?.readyState === "open") msRef.current.endOfStream();
+      } catch {}
+      sbRef.current = null;
+      msRef.current = null;
+    };
+  }, [isChef, relayAudioOn, playing, cameraLive, audioUrl, keyParam]);
 
   // Если MJPEG-поток не пошёл за 6 секунд (прокси буферизует multipart) —
   // падаем на покадровый поллинг (~6 к/с)
@@ -477,15 +619,23 @@ export default function LiveVideo({
         className={`absolute inset-0 h-full w-full object-cover ${playing ? "" : "hidden"}`}
       />
 
-      {/* Зритель смотрит: звук включается жестом — иначе браузер заблокирует автоплей */}
-      {!isChef && playing && muted && (
+      {/* Скрытый аудиоэлемент для звука резервного канала */}
+      <audio ref={audioRef} className="hidden" />
+
+      {/* Зритель смотрит: звук включается жестом — иначе браузер заблокирует автоплей.
+          Для WebRTC — снимаем mute с видео; для резервного канала — отдельный аудиопоток */}
+      {!isChef && ((playing && muted) || (!playing && relayShown && !relayAudioOn)) && (
         <button
           onClick={() => {
-            if (videoRef.current) {
-              videoRef.current.muted = false;
-              videoRef.current.play().catch(() => {});
+            if (playing) {
+              if (videoRef.current) {
+                videoRef.current.muted = false;
+                videoRef.current.play().catch(() => {});
+              }
+              setMuted(false);
+            } else {
+              startRelayAudio();
             }
-            setMuted(false);
           }}
           className="absolute bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-xl bg-black/65 px-4 py-2 text-xs font-bold text-white backdrop-blur hover:bg-black/80"
         >
@@ -514,7 +664,7 @@ export default function LiveVideo({
       )}
       {!isChef && !playing && relayShown && (
         <span className="absolute bottom-3 right-3 z-10 rounded-md bg-black/55 px-2 py-1 text-[11px] font-semibold text-white">
-          резервный канал · без звука
+          {relayAudioOn ? "резервный канал · звук включён" : "резервный канал"}
         </span>
       )}
 
