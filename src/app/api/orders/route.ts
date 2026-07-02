@@ -33,7 +33,7 @@ export async function POST(req: Request) {
   const deliveryType = body.deliveryType === "pickup" ? "pickup" : "delivery";
   const payment = body.payment === "card" ? "card" : "wallet";
   const address = String(body.address ?? "").trim().slice(0, 200);
-  const source = ["stream", "map", "site"].includes(body.source) ? body.source : "site";
+  const source = ["stream", "map", "site", "ai"].includes(body.source) ? body.source : "site";
 
   if (!chefId || reqItems.length === 0) return err("Корзина пуста");
   if (deliveryType === "delivery" && !address) return err("Укажите адрес доставки");

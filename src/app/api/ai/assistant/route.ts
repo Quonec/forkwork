@@ -56,6 +56,40 @@ function buildRecommendations(query: string): Rec[] {
   return recs.sort((a, b) => b.score - a.score).slice(0, 6);
 }
 
+// Намерение «заказать»: подбираем конкретное доступное блюдо — виджет покажет
+// форму оформления заказа прямо в чате
+const ORDER_RE = /заказ|закажи|оформи|купи|привез|достав|возьму|голоден|голодна|поесть\b/i;
+
+export type OrderProposal = {
+  dishId: number;
+  name: string;
+  price: number;
+  emoji: string;
+  chefId: number;
+  chefName: string;
+  delivery: number;
+  pickup: number;
+};
+
+function buildOrderProposal(query: string): OrderProposal | null {
+  const rows = db.prepare(
+    `SELECT d.id AS dishId, d.name, d.price, d.emoji, d.tags, d.description,
+       c.id AS chefId, u.name AS chefName, c.delivery, c.pickup
+     FROM dishes d JOIN chefs c ON c.id = d.chef_id JOIN users u ON u.id = c.user_id
+     WHERE d.available = 1 AND c.available = 1 AND u.blocked = 0`
+  ).all() as unknown as (OrderProposal & { tags: string; description: string })[];
+  let best: OrderProposal | null = null;
+  let bestScore = 0;
+  for (const r of rows) {
+    const s = score(query, `${r.name} ${r.description} ${r.tags}`);
+    if (s > bestScore) {
+      bestScore = s;
+      best = { dishId: r.dishId, name: r.name, price: r.price, emoji: r.emoji, chefId: r.chefId, chefName: r.chefName, delivery: r.delivery, pickup: r.pickup };
+    }
+  }
+  return best;
+}
+
 function fallbackPopular(): Rec[] {
   const live = db.prepare(
     `SELECT s.id, s.title, u.name AS chefName FROM streams s
@@ -113,10 +147,16 @@ export async function POST(req: Request) {
 
   const matched = buildRecommendations(query);
   const recs = matched.length > 0 ? matched : fallbackPopular();
+  const orderProposal = ORDER_RE.test(query) ? buildOrderProposal(query) : null;
   const ai = await claudeReply(query, recs);
+  let reply = ai ?? heuristicReply(query, matched);
+  if (orderProposal) {
+    reply += ` Могу оформить заказ на «${orderProposal.name}» у повара ${orderProposal.chefName} прямо здесь — форма ниже.`;
+  }
   return json({
-    reply: ai ?? heuristicReply(query, matched),
+    reply,
     recommendations: recs,
+    orderProposal,
     engine: ai ? "claude" : "heuristic",
   });
 }
