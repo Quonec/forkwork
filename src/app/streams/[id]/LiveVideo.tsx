@@ -64,6 +64,7 @@ export default function LiveVideo({
 
   const relayBusyRef = useRef(false);
   const relaySeqRef = useRef(0);
+  const mjpegLoadedRef = useRef(false);
 
   const [broadcasting, setBroadcasting] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -71,6 +72,9 @@ export default function LiveVideo({
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const [viewersConnected, setViewersConnected] = useState(0);
+  const [relayAvailable, setRelayAvailable] = useState(false);
+  const [relayMode, setRelayMode] = useState<"mjpeg" | "poll">("mjpeg");
+  const [relayShown, setRelayShown] = useState(false);
   const [relayFrame, setRelayFrame] = useState<string | null>(null);
   const [error, setError] = useState("");
   const isLive = status === "live";
@@ -296,11 +300,13 @@ export default function LiveVideo({
 
   // ---------- Резервный канал: повар шлёт JPEG-кадры через сервер ----------
   // Работает параллельно с WebRTC: если у зрителя P2P не пробился (нет TURN),
-  // он получит картинку с сервера. ~3 кадра/с, 640px, без звука.
+  // он смотрит MJPEG-поток с сервера. Целевой темп 25 к/с (тик 40 мс);
+  // при медленной сети или CPU кадры пропускаются, темп проседает плавно.
   useEffect(() => {
     if (!broadcasting) return;
     const canvas = document.createElement("canvas");
-    const t = setInterval(async () => {
+    const postUrl = `${relayUrl}${viewerKey ? `?key=${encodeURIComponent(viewerKey)}` : ""}`;
+    const t = setInterval(() => {
       const v = videoRef.current;
       if (!v || v.videoWidth === 0 || relayBusyRef.current) return;
       const w = 640;
@@ -308,33 +314,74 @@ export default function LiveVideo({
       canvas.width = w;
       canvas.height = h;
       canvas.getContext("2d")?.drawImage(v, 0, 0, w, h);
-      const frame = canvas.toDataURL("image/jpeg", 0.55);
       relayBusyRef.current = true;
-      try {
-        await fetch(relayUrl, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ frame, key: viewerKey }),
-        });
-      } catch {
-      } finally {
-        relayBusyRef.current = false;
-      }
-    }, 350);
+      canvas.toBlob(
+        async (blob) => {
+          try {
+            if (blob) {
+              await fetch(postUrl, {
+                method: "POST",
+                headers: { "Content-Type": "image/jpeg" },
+                body: blob,
+              });
+            }
+          } catch {
+          } finally {
+            relayBusyRef.current = false;
+          }
+        },
+        "image/jpeg",
+        0.5
+      );
+    }, 40);
     return () => {
       clearInterval(t);
       fetch(relayUrl, { method: "DELETE" }).catch(() => {});
     };
   }, [broadcasting, relayUrl, viewerKey]);
 
-  // Зритель: пока WebRTC-видео не пошло, забираем кадры с сервера
+  // Зритель: проверяем доступность резервного канала, пока WebRTC-видео не пошло
   useEffect(() => {
     if (isChef || !isLive) return;
     if (!cameraLive || playing) {
+      setRelayAvailable(false);
+      setRelayShown(false);
       setRelayFrame(null);
       relaySeqRef.current = 0;
       return;
     }
+    let stopped = false;
+    const probe = async () => {
+      if (stopped) return;
+      try {
+        const res = await fetch(`${relayUrl}?probe=1${keyParam}`);
+        if (!res.ok) return;
+        const d = (await res.json()) as { seq: number };
+        setRelayAvailable(d.seq > 0);
+      } catch {}
+    };
+    probe();
+    const t = setInterval(probe, 1500);
+    return () => {
+      stopped = true;
+      clearInterval(t);
+    };
+  }, [isChef, isLive, cameraLive, playing, relayUrl, keyParam]);
+
+  // Если MJPEG-поток не пошёл за 6 секунд (прокси буферизует multipart) —
+  // падаем на покадровый поллинг (~6 к/с)
+  useEffect(() => {
+    if (isChef || !relayAvailable || playing || relayMode !== "mjpeg") return;
+    mjpegLoadedRef.current = false;
+    const t = setTimeout(() => {
+      if (!mjpegLoadedRef.current) setRelayMode("poll");
+    }, 6000);
+    return () => clearTimeout(t);
+  }, [isChef, relayAvailable, playing, relayMode]);
+
+  // Покадровый фолбэк-поллинг (только когда MJPEG не заработал)
+  useEffect(() => {
+    if (isChef || !relayAvailable || playing || relayMode !== "poll") return;
     let stopped = false;
     const t = setInterval(async () => {
       if (stopped) return;
@@ -345,16 +392,15 @@ export default function LiveVideo({
         if (d.frame) {
           relaySeqRef.current = d.seq;
           setRelayFrame(d.frame);
-        } else if (!d.seq) {
-          setRelayFrame(null);
+          setRelayShown(true);
         }
       } catch {}
-    }, 450);
+    }, 150);
     return () => {
       stopped = true;
       clearInterval(t);
     };
-  }, [isChef, isLive, cameraLive, playing, relayUrl, keyParam]);
+  }, [isChef, relayAvailable, playing, relayMode, relayUrl, keyParam]);
 
   // Уборка при уходе со страницы
   useEffect(
@@ -401,19 +447,33 @@ export default function LiveVideo({
         </button>
       )}
 
-      {/* Резервный канал: кадры через сервер, пока WebRTC не подключился */}
-      {!isChef && !playing && relayFrame && (
-        <>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={relayFrame} alt="Эфир повара (резервный канал)" className="absolute inset-0 h-full w-full object-cover" />
-          <span className="absolute bottom-3 right-3 z-10 rounded-md bg-black/55 px-2 py-1 text-[11px] font-semibold text-white">
-            резервный канал · без звука
-          </span>
-        </>
+      {/* Резервный канал: MJPEG-поток через сервер, пока WebRTC не подключился */}
+      {!isChef && !playing && relayAvailable && relayMode === "mjpeg" && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img
+          src={`${relayUrl}?mjpeg=1${keyParam}`}
+          alt="Эфир повара (резервный канал)"
+          onLoad={() => {
+            mjpegLoadedRef.current = true;
+            setRelayShown(true);
+          }}
+          onError={() => setRelayMode("poll")}
+          className="absolute inset-0 h-full w-full object-cover"
+        />
+      )}
+      {/* Фолбэк: покадровый поллинг, если MJPEG не прошёл через прокси */}
+      {!isChef && !playing && relayMode === "poll" && relayFrame && (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={relayFrame} alt="Эфир повара (резервный канал)" className="absolute inset-0 h-full w-full object-cover" />
+      )}
+      {!isChef && !playing && relayShown && (
+        <span className="absolute bottom-3 right-3 z-10 rounded-md bg-black/55 px-2 py-1 text-[11px] font-semibold text-white">
+          резервный канал · без звука
+        </span>
       )}
 
       {/* Плейсхолдер, пока нет живого видео */}
-      {!playing && !relayFrame && (
+      {!playing && !relayShown && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
           <div className="steam mb-2 text-2xl font-bold text-orange-300/70">
             <span>~</span>
