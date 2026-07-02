@@ -62,16 +62,21 @@ export default function LiveVideo({
   const joinSentAtRef = useRef(0);
   const broadcastingRef = useRef(false);
 
+  const relayBusyRef = useRef(false);
+  const relaySeqRef = useRef(0);
+
   const [broadcasting, setBroadcasting] = useState(false);
   const [starting, setStarting] = useState(false);
   const [cameraLive, setCameraLive] = useState(false);
   const [playing, setPlaying] = useState(false);
   const [muted, setMuted] = useState(true);
   const [viewersConnected, setViewersConnected] = useState(0);
+  const [relayFrame, setRelayFrame] = useState<string | null>(null);
   const [error, setError] = useState("");
   const isLive = status === "live";
 
   const rtcUrl = `/api/streams/${streamId}/rtc`;
+  const relayUrl = `/api/streams/${streamId}/relay`;
   const keyParam = viewerKey ? `&key=${encodeURIComponent(viewerKey)}` : "";
 
   const post = useCallback(
@@ -289,6 +294,68 @@ export default function LiveVideo({
     };
   }, [isLive, isChef, rtcUrl, keyParam, hostHandleSignal, viewerHandleSignal, post]);
 
+  // ---------- Резервный канал: повар шлёт JPEG-кадры через сервер ----------
+  // Работает параллельно с WebRTC: если у зрителя P2P не пробился (нет TURN),
+  // он получит картинку с сервера. ~3 кадра/с, 640px, без звука.
+  useEffect(() => {
+    if (!broadcasting) return;
+    const canvas = document.createElement("canvas");
+    const t = setInterval(async () => {
+      const v = videoRef.current;
+      if (!v || v.videoWidth === 0 || relayBusyRef.current) return;
+      const w = 640;
+      const h = Math.round((v.videoHeight / v.videoWidth) * w) || 360;
+      canvas.width = w;
+      canvas.height = h;
+      canvas.getContext("2d")?.drawImage(v, 0, 0, w, h);
+      const frame = canvas.toDataURL("image/jpeg", 0.55);
+      relayBusyRef.current = true;
+      try {
+        await fetch(relayUrl, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ frame, key: viewerKey }),
+        });
+      } catch {
+      } finally {
+        relayBusyRef.current = false;
+      }
+    }, 350);
+    return () => {
+      clearInterval(t);
+      fetch(relayUrl, { method: "DELETE" }).catch(() => {});
+    };
+  }, [broadcasting, relayUrl, viewerKey]);
+
+  // Зритель: пока WebRTC-видео не пошло, забираем кадры с сервера
+  useEffect(() => {
+    if (isChef || !isLive) return;
+    if (!cameraLive || playing) {
+      setRelayFrame(null);
+      relaySeqRef.current = 0;
+      return;
+    }
+    let stopped = false;
+    const t = setInterval(async () => {
+      if (stopped) return;
+      try {
+        const res = await fetch(`${relayUrl}?since=${relaySeqRef.current}${keyParam}`);
+        if (!res.ok) return;
+        const d = (await res.json()) as { seq: number; frame?: string };
+        if (d.frame) {
+          relaySeqRef.current = d.seq;
+          setRelayFrame(d.frame);
+        } else if (!d.seq) {
+          setRelayFrame(null);
+        }
+      } catch {}
+    }, 450);
+    return () => {
+      stopped = true;
+      clearInterval(t);
+    };
+  }, [isChef, isLive, cameraLive, playing, relayUrl, keyParam]);
+
   // Уборка при уходе со страницы
   useEffect(
     () => () => {
@@ -334,8 +401,19 @@ export default function LiveVideo({
         </button>
       )}
 
+      {/* Резервный канал: кадры через сервер, пока WebRTC не подключился */}
+      {!isChef && !playing && relayFrame && (
+        <>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={relayFrame} alt="Эфир повара (резервный канал)" className="absolute inset-0 h-full w-full object-cover" />
+          <span className="absolute bottom-3 right-3 z-10 rounded-md bg-black/55 px-2 py-1 text-[11px] font-semibold text-white">
+            резервный канал · без звука
+          </span>
+        </>
+      )}
+
       {/* Плейсхолдер, пока нет живого видео */}
-      {!playing && (
+      {!playing && !relayFrame && (
         <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
           <div className="steam mb-2 text-2xl font-bold text-orange-300/70">
             <span>~</span>
