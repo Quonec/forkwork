@@ -65,6 +65,12 @@ export default function LiveVideo({
   const relayBusyRef = useRef(false);
   const relaySeqRef = useRef(0);
   const mjpegLoadedRef = useRef(false);
+  // P2P-дерево: соединение с родителем (повар или зритель-ретранслятор),
+  // полученный от него поток и флаг «мы уже объявили себя раздающим узлом»
+  const parentRef = useRef<Peer | null>(null);
+  const parentIdRef = useRef<string>("");
+  const remoteStreamRef = useRef<MediaStream | null>(null);
+  const relayReadySentRef = useRef(false);
 
   const [broadcasting, setBroadcasting] = useState(false);
   const [starting, setStarting] = useState(false);
@@ -160,30 +166,40 @@ export default function LiveVideo({
     setPlaying(false);
   }, [post, closePeers]);
 
+  // Подключение «ребёнка» в P2P-дереве: повар и зритель-ретранслятор раздают
+  // одинаково — различается только источник (камера или поток от родителя)
+  const addChild = useCallback(
+    async (childId: string, source: MediaStream) => {
+      peersRef.current.get(childId)?.pc.close();
+      const pc = new RTCPeerConnection(iceServers());
+      const peer: Peer = { pc, iceQueue: [], hasRemote: false };
+      peersRef.current.set(childId, peer);
+      source.getTracks().forEach((t) => pc.addTrack(t, source));
+      pc.onicecandidate = (e) => {
+        if (e.candidate) post({ type: "ice", target: childId, payload: JSON.stringify(e.candidate.toJSON()) });
+      };
+      pc.onconnectionstatechange = () => {
+        if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
+          peersRef.current.delete(childId);
+        }
+        setViewersConnected(
+          [...peersRef.current.values()].filter((p) => p.pc.connectionState === "connected").length
+        );
+      };
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
+      await post({ type: "offer", target: childId, payload: JSON.stringify(offer) });
+    },
+    [post]
+  );
+
+  // ---------- ПОВАР: корень дерева ----------
   const hostHandleSignal = useCallback(
     async (s: Signal) => {
       const local = localStreamRef.current;
       if (!local) return;
       if (s.type === "join") {
-        peersRef.current.get(s.sender)?.pc.close();
-        const pc = new RTCPeerConnection(iceServers());
-        const peer: Peer = { pc, iceQueue: [], hasRemote: false };
-        peersRef.current.set(s.sender, peer);
-        local.getTracks().forEach((t) => pc.addTrack(t, local));
-        pc.onicecandidate = (e) => {
-          if (e.candidate) post({ type: "ice", target: s.sender, payload: JSON.stringify(e.candidate.toJSON()) });
-        };
-        pc.onconnectionstatechange = () => {
-          if (["failed", "closed", "disconnected"].includes(pc.connectionState)) {
-            peersRef.current.delete(s.sender);
-          }
-          setViewersConnected(
-            [...peersRef.current.values()].filter((p) => p.pc.connectionState === "connected").length
-          );
-        };
-        const offer = await pc.createOffer();
-        await pc.setLocalDescription(offer);
-        await post({ type: "offer", target: s.sender, payload: JSON.stringify(offer) });
+        await addChild(s.sender, local);
       } else if (s.type === "answer") {
         const peer = peersRef.current.get(s.sender);
         if (!peer) return;
@@ -197,23 +213,38 @@ export default function LiveVideo({
         peersRef.current.delete(s.sender);
       }
     },
-    [post]
+    [addChild]
   );
 
-  // ---------- ЗРИТЕЛЬ: приём ----------
+  // ---------- ЗРИТЕЛЬ: приём от родителя + ретрансляция своим детям ----------
+  const dropParent = useCallback(() => {
+    parentRef.current?.pc.close();
+    parentRef.current = null;
+    parentIdRef.current = "";
+    remoteStreamRef.current = null;
+    // Без источника детей не удержать: закрываем — они переподключатся к живым узлам
+    peersRef.current.forEach((p) => p.pc.close());
+    peersRef.current.clear();
+    if (videoRef.current) videoRef.current.srcObject = null;
+    joinSentAtRef.current = 0; // следующий тик поллинга переподключится
+    setPlaying(false);
+  }, []);
+
   const viewerHandleSignal = useCallback(
     async (s: Signal) => {
       if (s.type === "offer") {
-        peersRef.current.get("host")?.pc.close();
+        // Оффер от родителя — повара или зрителя-ретранслятора
+        parentRef.current?.pc.close();
         const pc = new RTCPeerConnection(iceServers());
         const peer: Peer = { pc, iceQueue: [], hasRemote: false };
-        peersRef.current.set("host", peer);
+        parentRef.current = peer;
+        parentIdRef.current = s.sender;
         pc.ontrack = (e) => {
           if (videoRef.current && e.streams[0]) {
             // Автоплей разрешён только без звука — стартуем приглушённо,
             // звук зритель включает кнопкой (жест пользователя).
             // setPlaying здесь не зовём: видео покажем по факту прихода кадров
-            // (событие onPlaying на элементе), а не по факту получения трека
+            remoteStreamRef.current = e.streams[0];
             videoRef.current.srcObject = e.streams[0];
             videoRef.current.muted = true;
             setMuted(true);
@@ -224,12 +255,7 @@ export default function LiveVideo({
           if (e.candidate) post({ type: "ice", payload: JSON.stringify(e.candidate.toJSON()) });
         };
         pc.onconnectionstatechange = () => {
-          if (["failed", "closed"].includes(pc.connectionState)) {
-            pc.close();
-            peersRef.current.delete("host");
-            joinSentAtRef.current = 0; // следующий тик поллинга переподключится
-            setPlaying(false);
-          }
+          if (["failed", "closed"].includes(pc.connectionState)) dropParent();
         };
         await pc.setRemoteDescription(JSON.parse(s.payload));
         flushIce(peer);
@@ -237,11 +263,26 @@ export default function LiveVideo({
         await pc.setLocalDescription(answer);
         await post({ type: "answer", payload: JSON.stringify(answer) });
       } else if (s.type === "ice") {
-        const peer = peersRef.current.get("host");
-        if (peer) applyIce(peer, s.payload);
+        if (s.sender === parentIdRef.current) {
+          if (parentRef.current) applyIce(parentRef.current, s.payload);
+        } else {
+          const child = peersRef.current.get(s.sender);
+          if (child) applyIce(child, s.payload);
+        }
+      } else if (s.type === "join") {
+        // Сервер назначил нам ребёнка — устройство зрителя раздаёт поток дальше
+        if (remoteStreamRef.current) await addChild(s.sender, remoteStreamRef.current);
+      } else if (s.type === "answer") {
+        const child = peersRef.current.get(s.sender);
+        if (!child) return;
+        await child.pc.setRemoteDescription(JSON.parse(s.payload));
+        flushIce(child);
+      } else if (s.type === "leave") {
+        peersRef.current.get(s.sender)?.pc.close();
+        peersRef.current.delete(s.sender);
       }
     },
-    [post]
+    [post, addChild, dropParent]
   );
 
   // ---------- Общий поллинг сигналинга ----------
@@ -268,9 +309,9 @@ export default function LiveVideo({
           if (localStreamRef.current) for (const s of data.signals) await hostHandleSignal(s);
         } else {
           if (data.cameraLive) {
-            // Камера повара в эфире, а соединения нет — стучимся;
+            // Камера повара в эфире, а соединения с родителем нет — стучимся;
             // повторяем join каждые ~8 секунд, пока не получим оффер
-            const pc = peersRef.current.get("host")?.pc;
+            const pc = parentRef.current?.pc;
             const connected = pc && ["connected", "connecting"].includes(pc.connectionState);
             if (!connected && Date.now() - joinSentAtRef.current > 8000) {
               joinSentAtRef.current = Date.now();
@@ -278,12 +319,8 @@ export default function LiveVideo({
             }
           } else {
             joinSentAtRef.current = 0;
-            if (peersRef.current.has("host")) {
-              peersRef.current.get("host")?.pc.close();
-              peersRef.current.delete("host");
-              if (videoRef.current) videoRef.current.srcObject = null;
-              setPlaying(false);
-            }
+            relayReadySentRef.current = false;
+            if (parentRef.current || peersRef.current.size > 0) dropParent();
           }
           for (const s of data.signals) await viewerHandleSignal(s);
         }
@@ -296,7 +333,7 @@ export default function LiveVideo({
       stopped = true;
       clearInterval(t);
     };
-  }, [isLive, isChef, rtcUrl, keyParam, hostHandleSignal, viewerHandleSignal, post]);
+  }, [isLive, isChef, rtcUrl, keyParam, hostHandleSignal, viewerHandleSignal, post, dropParent]);
 
   // ---------- Резервный канал: повар шлёт JPEG-кадры через сервер ----------
   // Работает параллельно с WebRTC: если у зрителя P2P не пробился (нет TURN),
@@ -413,6 +450,8 @@ export default function LiveVideo({
           })
         );
       }
+      parentRef.current?.pc.close();
+      parentRef.current = null;
       peersRef.current.forEach((p) => p.pc.close());
       peersRef.current.clear();
       localStreamRef.current?.getTracks().forEach((t) => t.stop());
@@ -427,7 +466,14 @@ export default function LiveVideo({
         autoPlay
         playsInline
         muted
-        onPlaying={() => setPlaying(true)}
+        onPlaying={() => {
+          setPlaying(true);
+          // Кадры реально пошли — устройство зрителя готово раздавать поток дальше
+          if (!isChef && remoteStreamRef.current && !relayReadySentRef.current) {
+            relayReadySentRef.current = true;
+            post({ type: "relay-ready" });
+          }
+        }}
         className={`absolute inset-0 h-full w-full object-cover ${playing ? "" : "hidden"}`}
       />
 
