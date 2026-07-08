@@ -3,6 +3,7 @@ import { getSessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fmtFC } from "@/lib/format";
 import CartBadge from "./CartBadge";
+import ThemePicker from "./ThemePicker";
 
 const NAV = [
   { href: "/map", label: "Карта" },
@@ -52,6 +53,7 @@ export default async function Header() {
               {fmtFC(balance)}
             </Link>
           )}
+          <ThemePicker />
           <CartBadge />
           {user ? (
             <details className="group relative">

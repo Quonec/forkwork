@@ -17,6 +17,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="ru" className="h-full">
       <body className="flex min-h-full flex-col">
+        {/* Палитра применяется до гидрации — без мигания цветов при загрузке */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `try{var t=localStorage.getItem("fw-theme");if(t)document.documentElement.dataset.theme=t}catch(e){}`,
+          }}
+        />
         <CartProvider>
           <Header />
           <main className="flex-1 pb-16 md:pb-0">{children}</main>

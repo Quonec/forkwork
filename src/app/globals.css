@@ -48,6 +48,55 @@
   --color-amber-900: #59420d;
 }
 
+/* Сменные цветовые палитры: переключаются атрибутом data-theme на <html>
+   (компонент ThemePicker в шапке, выбор хранится в localStorage).
+   Переопределяются акцентные шкалы yellow/orange — вся разметка нетронута. */
+:root[data-theme="emerald"] {
+  --color-yellow-300: #57c690;
+  --color-yellow-400: #17a673;
+  --color-yellow-500: #0e8a5f;
+  --color-orange-50: #e9f7f0;
+  --color-orange-100: #d4efe2;
+  --color-orange-200: #aadfc6;
+  --color-orange-300: #7fcea9;
+  --color-orange-400: #4bb888;
+  --color-orange-500: #17a673;
+  --color-orange-600: #128a60;
+  --color-orange-700: #0d6f4d;
+}
+:root[data-theme="berry"] {
+  --color-yellow-300: #d97b98;
+  --color-yellow-400: #c2436b;
+  --color-yellow-500: #a83458;
+  --color-orange-50: #faeef2;
+  --color-orange-100: #f5dce4;
+  --color-orange-200: #ecbac9;
+  --color-orange-300: #e194ac;
+  --color-orange-400: #d26a8c;
+  --color-orange-500: #c2436b;
+  --color-orange-600: #a23458;
+  --color-orange-700: #822846;
+}
+:root[data-theme="ocean"] {
+  --color-yellow-300: #6d9fd0;
+  --color-yellow-400: #2f6fb0;
+  --color-yellow-500: #245d96;
+  --color-orange-50: #edf3fa;
+  --color-orange-100: #dbe7f4;
+  --color-orange-200: #b8cfe9;
+  --color-orange-300: #92b5dc;
+  --color-orange-400: #5f92c6;
+  --color-orange-500: #2f6fb0;
+  --color-orange-600: #265d95;
+  --color-orange-700: #1e4a78;
+}
+/* Тёмный текст на кнопках плохо читается на насыщенных темах — белый акцентный текст */
+:root[data-theme="emerald"] .btn-primary,
+:root[data-theme="berry"] .btn-primary,
+:root[data-theme="ocean"] .btn-primary {
+  color: #fffdf8;
+}
+
 body {
   @apply bg-stone-50 text-stone-950 antialiased;
   font-family: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;

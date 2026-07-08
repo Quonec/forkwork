@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { STARTER_DISHES } from "@/lib/starter-dishes";
 
 function RegisterForm() {
   const router = useRouter();
@@ -15,8 +16,12 @@ function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [specialization, setSpecialization] = useState("");
+  const [starterDishes, setStarterDishes] = useState<number[]>([]);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+
+  const toggleDish = (i: number) =>
+    setStarterDishes((s) => (s.includes(i) ? s.filter((x) => x !== i) : s.length < 12 ? [...s, i] : s));
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -25,7 +30,7 @@ function RegisterForm() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, role, specialization }),
+      body: JSON.stringify({ name, email, password, role, specialization, starterDishes }),
     });
     const data = await res.json();
     setBusy(false);
@@ -80,10 +85,42 @@ function RegisterForm() {
           <input className="input" type="password" value={password} onChange={(e) => setPassword(e.target.value)} required minLength={6} />
         </div>
         {role === "chef" && (
-          <div>
-            <label className="label">Специализация</label>
-            <input className="input" value={specialization} onChange={(e) => setSpecialization(e.target.value)} placeholder="Например: неаполитанская пицца" />
-          </div>
+          <>
+            <div>
+              <label className="label">Специализация</label>
+              <input className="input" value={specialization} onChange={(e) => setSpecialization(e.target.value)} placeholder="Например: неаполитанская пицца" />
+            </div>
+            <div>
+              <label className="label">
+                Что вы готовите? <span className="normal-case text-stone-400">выбранное станет вашим меню · {starterDishes.length}/12</span>
+              </label>
+              <div className="max-h-64 space-y-3 overflow-y-auto rounded-xl bg-stone-50 p-3 ring-1 ring-stone-200">
+                {[...new Set(STARTER_DISHES.map((d) => d.category))].map((cat) => (
+                  <div key={cat}>
+                    <p className="mb-1.5 text-[10px] font-bold uppercase tracking-widest text-stone-400">{cat}</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {STARTER_DISHES.map((d, i) =>
+                        d.category === cat ? (
+                          <button
+                            type="button"
+                            key={d.name}
+                            onClick={() => toggleDish(i)}
+                            title={`${d.description} · ${d.price} FC`}
+                            className={`chip ${starterDishes.includes(i) ? "bg-orange-500 text-white" : "bg-white text-stone-600 ring-1 ring-stone-200 hover:ring-orange-400"}`}
+                          >
+                            {d.name}
+                          </button>
+                        ) : null
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <p className="mt-1.5 text-[11px] text-stone-400">
+                Блюда появятся в вашем меню с базовыми ценами — их можно отредактировать в кабинете. Можно пропустить и добавить свои.
+              </p>
+            </div>
+          </>
         )}
         {error && <p className="rounded-xl bg-red-50 px-3 py-2 text-sm text-red-600">{error}</p>}
         <button className="btn-primary w-full" disabled={busy}>
