@@ -6,6 +6,7 @@ import Link from "next/link";
 import { fmtFC, fmtDateTime, timeAgo } from "@/lib/format";
 import { StatusChip } from "@/components/StatusChip";
 import CameraStudio from "@/components/CameraStudio";
+import LocationPicker from "@/components/LocationPicker";
 import { Stranded } from "@/components/ui";
 import { ORDER_FLOW, ORDER_STATUS_RU, type CartItem } from "@/lib/types";
 
@@ -614,14 +615,10 @@ function ProfileTab({ profile, act }: { profile: KitchenData["profile"]; act: (b
           <label className="label">Часы работы</label>
           <input className="input" value={form.workHours} onChange={(e) => setForm({ ...form, workHours: e.target.value })} />
         </div>
-        <div>
-          <label className="label">Широта (карта)</label>
-          <input type="number" step="0.0001" className="input" value={form.lat ?? ""} onChange={(e) => setForm({ ...form, lat: e.target.value ? Number(e.target.value) : null })} placeholder="55.75" />
-        </div>
-        <div>
-          <label className="label">Долгота (карта)</label>
-          <input type="number" step="0.0001" className="input" value={form.lng ?? ""} onChange={(e) => setForm({ ...form, lng: e.target.value ? Number(e.target.value) : null })} placeholder="37.62" />
-        </div>
+      </div>
+      <div>
+        <label className="label">Локация на карте</label>
+        <LocationPicker lat={form.lat} lng={form.lng} onChange={(lat, lng) => setForm((f) => ({ ...f, lat, lng }))} />
       </div>
       <div className="flex flex-wrap items-center gap-4">
         <div>

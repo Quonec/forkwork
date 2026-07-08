@@ -410,6 +410,10 @@ function seed(db: DatabaseSync) {
   order(denisId, sofia, "delivering",
     [{ dishId: dRamyeon, name: "Рамён с кимчи", price: 450, qty: 1, emoji: "" }],
     450, "delivery", "map", minsAgo(35));
+  // Заказ, оформленный через AI-агента прямо из чата
+  order(kirillId, polina, "new",
+    [{ dishId: dBowl, name: "Будда-боул", price: 490, qty: 1, emoji: "" }],
+    490, "pickup", "ai", minsAgo(3));
 
   // --- отзывы ---
   const insReview = db.prepare(
@@ -496,6 +500,7 @@ function seed(db: DatabaseSync) {
     insEvent.run("stream_view", anyaId, JSON.stringify({ streamId: sMarco }), daysAgo(d));
     if (d % 2 === 0) insEvent.run("stream_view", lenaId, JSON.stringify({ streamId: sNino }), daysAgo(d));
     if (d % 3 === 0) insEvent.run("order_created", anyaId, JSON.stringify({ source: "stream" }), daysAgo(d));
+    if (d % 4 === 0) insEvent.run("order_created", kirillId, JSON.stringify({ source: "ai" }), daysAgo(d));
   }
 }
 

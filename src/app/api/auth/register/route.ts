@@ -3,6 +3,7 @@ import { db, nowIso } from "@/lib/db";
 import { createSession } from "@/lib/auth";
 import { json, err } from "@/lib/api";
 import { logEvent } from "@/lib/queries";
+import { STARTER_DISHES } from "@/lib/starter-dishes";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -34,9 +35,24 @@ export async function POST(req: Request) {
 
   if (role === "chef") {
     // Профиль повара создаётся сразу, заполняется в кабинете
-    db.prepare("INSERT INTO chefs (user_id, bio, specialization) VALUES (?,?,?)").run(
-      userId, "", String(body.specialization ?? "").trim()
+    const chefId = Number(
+      db.prepare("INSERT INTO chefs (user_id, bio, specialization) VALUES (?,?,?)").run(
+        userId, "", String(body.specialization ?? "").trim()
+      ).lastInsertRowid
     );
+    // Стартовое меню: выбранные при регистрации блюда из общего каталога
+    const picked: number[] = Array.isArray(body.starterDishes)
+      ? [...new Set<number>(body.starterDishes.map(Number))]
+          .filter((i) => Number.isInteger(i) && i >= 0 && i < STARTER_DISHES.length)
+          .slice(0, 12)
+      : [];
+    const insDish = db.prepare(
+      "INSERT INTO dishes (chef_id, name, description, price, emoji, tags, available, created_at) VALUES (?,?,?,?,?,?,1,?)"
+    );
+    for (const i of picked) {
+      const d = STARTER_DISHES[i];
+      insDish.run(chefId, d.name, d.description, d.price, "", d.tags, nowIso());
+    }
   }
 
   logEvent("signup", userId, { role });
