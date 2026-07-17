@@ -15,7 +15,9 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="ru" className="h-full">
+    // suppressHydrationWarning: inline-скрипт ниже ставит data-theme на <html>
+    // до гидрации — React не должен считать это расхождением с SSR-разметкой
+    <html lang="ru" className="h-full" suppressHydrationWarning>
       <body className="flex min-h-full flex-col">
         {/* Палитра применяется до гидрации — без мигания цветов при загрузке */}
         <script
