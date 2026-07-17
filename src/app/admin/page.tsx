@@ -28,23 +28,30 @@ type Totals = {
 function Admin() {
   const params = useSearchParams();
   const tab = params.get("tab") ?? "stats";
-  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  // Ответ храним вместе с вкладкой, для которой он загружен: поздний ответ
+  // предыдущей вкладки не должен рендериться под чужим view (иначе краш)
+  const [loaded, setLoaded] = useState<{ tab: string; data: Record<string, unknown> } | null>(null);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
 
   const load = useCallback(async () => {
-    const res = await fetch(`/api/admin?view=${tab}`);
-    if (res.status === 401) return (window.location.href = "/login");
-    const d = await res.json();
-    if (!res.ok) return setError(d.error ?? "Нет доступа");
-    setError("");
-    setData(d);
+    try {
+      const res = await fetch(`/api/admin?view=${tab}`);
+      if (res.status === 401) return (window.location.href = "/login");
+      const d = await res.json().catch(() => null);
+      if (!res.ok || !d) return setError(d?.error ?? "Нет доступа");
+      setError("");
+      setLoaded({ tab, data: d });
+    } catch {
+      setError("Сервер недоступен — обновите страницу");
+    }
   }, [tab]);
 
   useEffect(() => {
-    setData(null);
     load();
   }, [load]);
+
+  const data = loaded && loaded.tab === tab ? loaded.data : null;
 
   const act = async (body: Record<string, unknown>, okNote = "Готово") => {
     const res = await fetch("/api/admin", {
