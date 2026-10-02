@@ -2,29 +2,83 @@
 
 import { useEffect, useRef, useState } from "react";
 import type { ChefCard } from "@/lib/types";
-
-import { loadYmaps } from "@/lib/ymaps";
+import type { Venue } from "@/lib/venues/types";
+import type { OsmVenue } from "@/lib/venues/osm";
 
 const MOSCOW: [number, number] = [55.751, 37.615];
-// Точка «вы здесь» по умолчанию — уточняется геолокацией браузера
+// Демо-точка «вы здесь» — в проде заменяется геолокацией
 export const USER_POINT: [number, number] = [55.7468, 37.6064];
 
+const API_KEY = process.env.NEXT_PUBLIC_YANDEX_MAPS_API_KEY ?? "";
+
 /* eslint-disable @typescript-eslint/no-explicit-any */
+declare global {
+  interface Window {
+    ymaps?: any;
+  }
+}
+
+// Скрипт Яндекс.Карт подгружается один раз на всё приложение
+let loaderPromise: Promise<any> | null = null;
+function loadYmaps(): Promise<any> {
+  if (typeof window === "undefined") return Promise.reject(new Error("no window"));
+  if (window.ymaps?.Map) return Promise.resolve(window.ymaps);
+  if (!loaderPromise) {
+    loaderPromise = new Promise((resolve, reject) => {
+      const ready = () => window.ymaps.ready(() => resolve(window.ymaps));
+      const existing = document.getElementById("ymaps-script") as HTMLScriptElement | null;
+      if (existing) {
+        existing.addEventListener("load", ready);
+        existing.addEventListener("error", reject);
+        return;
+      }
+      const s = document.createElement("script");
+      s.id = "ymaps-script";
+      s.async = true;
+      s.src = `https://api-maps.yandex.ru/2.1/?lang=ru_RU${API_KEY ? `&apikey=${API_KEY}` : ""}`;
+      s.onload = ready;
+      s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  return loaderPromise;
+}
 
 export default function MapView({
   chefs,
   selected,
   onSelect,
+  venues = [],
+  selectedVenue = null,
+  onSelectVenue,
+  osm = [],
+  selectedOsm = null,
+  onSelectOsm,
+  onBounds,
 }: {
   chefs: ChefCard[];
   selected: number | null;
   onSelect: (id: number | null) => void;
+  venues?: Venue[];
+  selectedVenue?: string | null;
+  onSelectVenue?: (id: string | null) => void;
+  osm?: OsmVenue[];
+  selectedOsm?: string | null;
+  onSelectOsm?: (id: string | null) => void;
+  onBounds?: (bbox: [number, number, number, number]) => void;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<any>(null);
   const collRef = useRef<any>(null); // маркеры поваров + линия маршрута
   const onSelectRef = useRef(onSelect);
   onSelectRef.current = onSelect;
+  const onSelectVenueRef = useRef(onSelectVenue);
+  onSelectVenueRef.current = onSelectVenue;
+  const onSelectOsmRef = useRef(onSelectOsm);
+  onSelectOsmRef.current = onSelectOsm;
+  const onBoundsRef = useRef(onBounds);
+  onBoundsRef.current = onBounds;
+  const clusterRef = useRef<any>(null);
 
   const [ready, setReady] = useState(false);
   const [failed, setFailed] = useState(false);
@@ -57,7 +111,25 @@ export default function MapView({
 
         const coll = new ymaps.GeoObjectCollection();
         map.geoObjects.add(coll);
-        map.events.add("click", () => onSelectRef.current(null));
+        map.events.add("click", () => {
+          onSelectRef.current(null);
+          onSelectVenueRef.current?.(null);
+          onSelectOsmRef.current?.(null);
+        });
+
+        const clusterer = new ymaps.Clusterer({ preset: "islands#invertedYellowClusterIcons", groupByCoordinates: false, gridSize: 80 });
+        map.geoObjects.add(clusterer);
+        clusterRef.current = clusterer;
+        let timer: ReturnType<typeof setTimeout> | undefined;
+        const report = () => {
+          const b = map.getBounds();
+          onBoundsRef.current?.([b[0][0], b[0][1], b[1][0], b[1][1]]);
+        };
+        map.events.add("boundschange", () => {
+          clearTimeout(timer);
+          timer = setTimeout(report, 350);
+        });
+        report();
 
         mapRef.current = map;
         collRef.current = coll;
@@ -71,6 +143,7 @@ export default function MapView({
         mapRef.current.destroy();
         mapRef.current = null;
         collRef.current = null;
+        clusterRef.current = null;
       }
     };
   }, []);
@@ -89,7 +162,7 @@ export default function MapView({
       if (chef.lat == null || chef.lng == null) continue;
       const isSel = chef.id === selected;
       const ring = isSel ? "#fcd000" : chef.liveStreamId ? "#dc2626" : chef.available ? "#10b981" : "#c0b08e";
-      const size = isSel ? 52 : 44;
+      const size = isSel ? 40 : 32;
       const letter = (chef.name.trim().charAt(0) || "F").toUpperCase();
       const live = chef.liveStreamId
         ? `<span style="position:absolute;top:-4px;right:-4px;background:#dc2626;color:#fff;font-size:8px;font-weight:800;padding:1px 4px;border-radius:99px;">LIVE</span>`
@@ -114,6 +187,32 @@ export default function MapView({
       coll.add(pm);
     }
 
+    // Заведения Москвы: квадратные охровые метки
+    for (const v of venues) {
+      const isSel = v.id === selectedVenue;
+      // Маленькая метка точно по координатам: накрывает точку заведения на подложке карты
+      const size = isSel ? 24 : 18;
+      const html = `<div style="position:relative;transform:translate(-${size / 2}px,-${size / 2}px);width:${size}px;height:${size}px;background:#d09c2e;border:${isSel ? 3 : 2}px solid ${isSel ? "#fcd000" : "#fffefb"};border-radius:50%;box-sizing:border-box;box-shadow:0 1px 4px rgba(23,20,16,.35);"></div>`;
+      const pm = new ymaps.Placemark(
+        [v.lat, v.lng],
+        {},
+        {
+          iconLayout: ymaps.templateLayoutFactory.createClass(html),
+          iconShape: { type: "Circle", coordinates: [0, 0], radius: size / 2 + 4 },
+          zIndexActive: 1000,
+          zIndex: isSel ? 998 : 0,
+        }
+      );
+      const vid = v.id;
+      pm.events.add("click", (e: any) => {
+        e.preventDefault();
+        onSelectVenueRef.current?.(vid);
+      });
+      coll.add(pm);
+    }
+    const selV = venues.find((v) => v.id === selectedVenue);
+    if (selV) map.setCenter([selV.lat, selV.lng], 15, { duration: 400 });
+
     // Маршрут «вы → кухня повара»
     const sel = chefs.find((c) => c.id === selected);
     if (sel && sel.lat != null && sel.lng != null) {
@@ -134,7 +233,32 @@ export default function MapView({
         { checkZoomRange: true, zoomMargin: 70, duration: 500 }
       );
     }
-  }, [ready, chefs, selected]);
+  }, [ready, chefs, selected, venues, selectedVenue]);
+
+  // Все заведения Москвы из OpenStreetMap: кластеры и точки в видимой области
+  useEffect(() => {
+    if (!ready) return;
+    const ymaps = window.ymaps;
+    const cl = clusterRef.current;
+    if (!ymaps || !cl) return;
+    cl.removeAll();
+    const marks = osm.map((o) => {
+      const pm = new ymaps.Placemark(
+        [o.lat, o.lng],
+        { hintContent: o.name },
+        { preset: o.id === selectedOsm ? "islands#blackCircleDotIcon" : "islands#orangeCircleDotIcon", iconCaptionMaxWidth: 0 }
+      );
+      const oid = o.id;
+      pm.events.add("click", (e: any) => {
+        e.preventDefault();
+        onSelectOsmRef.current?.(oid);
+      });
+      return pm;
+    });
+    cl.add(marks);
+    const sel = osm.find((o) => o.id === selectedOsm);
+    if (sel && mapRef.current) mapRef.current.setCenter([sel.lat, sel.lng], Math.max(mapRef.current.getZoom(), 16), { duration: 400 });
+  }, [ready, osm, selectedOsm]);
 
   if (failed) {
     return (

@@ -27,31 +27,30 @@ type Totals = {
 
 function Admin() {
   const params = useSearchParams();
-  const tab = params.get("tab") ?? "stats";
-  // Ответ храним вместе с вкладкой, для которой он загружен: поздний ответ
-  // предыдущей вкладки не должен рендериться под чужим view (иначе краш)
-  const [loaded, setLoaded] = useState<{ tab: string; data: Record<string, unknown> } | null>(null);
+  // Неизвестная вкладка в адресе — открываем первую, а не пустую страницу.
+  const raw = params.get("tab");
+  const tab = TABS.some(([k]) => k === raw) ? raw! : "stats";
+  // Данные помечены вкладкой, для которой загружены: при переключении старый ответ
+  // не попадает в новую вкладку (иначе, например, chefs ещё undefined и страница падает).
+  const [loaded, setData] = useState<(Record<string, unknown> & { __view: string }) | null>(null);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
 
+  const data = loaded?.__view === tab ? loaded : null;
+
   const load = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/admin?view=${tab}`);
-      if (res.status === 401) return (window.location.href = "/login");
-      const d = await res.json().catch(() => null);
-      if (!res.ok || !d) return setError(d?.error ?? "Нет доступа");
-      setError("");
-      setLoaded({ tab, data: d });
-    } catch {
-      setError("Сервер недоступен — обновите страницу");
-    }
+    const res = await fetch(`/api/admin?view=${tab}`);
+    if (res.status === 401) return (window.location.href = "/login");
+    const d = await res.json();
+    if (!res.ok) return setError(d.error ?? "Нет доступа");
+    setError("");
+    setData({ ...d, __view: tab });
   }, [tab]);
 
   useEffect(() => {
+    setData(null);
     load();
   }, [load]);
-
-  const data = loaded && loaded.tab === tab ? loaded.data : null;
 
   const act = async (body: Record<string, unknown>, okNote = "Готово") => {
     const res = await fetch("/api/admin", {

@@ -12,7 +12,7 @@ export default function CartBar() {
   if (count === 0 || pathname === "/cart" || pathname.startsWith("/orders")) return null;
 
   return (
-    <div className="fixed inset-x-4 bottom-16 z-[1140] md:bottom-5 md:left-auto md:right-24 md:w-96">
+    <div className="fixed inset-x-4 bottom-28 z-[1140] md:bottom-5 md:left-auto md:right-24 md:w-96">
       <Link
         href="/cart"
         className="flex items-center justify-between gap-3 rounded-lg bg-stone-950 px-4 py-3 text-white shadow-lg shadow-stone-950/25 transition-colors hover:bg-stone-800"

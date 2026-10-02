@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getSessionUser } from "./auth";
+import { getSessionUser, getSessionUserOrGuest } from "./auth";
 import type { Role, SessionUser } from "./types";
 
 export const json = (data: unknown, status = 200) => NextResponse.json(data, { status });
@@ -14,3 +14,10 @@ export async function requireUser(role?: Role): Promise<SessionUser | NextRespon
 }
 
 export const isResponse = (v: unknown): v is NextResponse => v instanceof NextResponse;
+
+/** Пользователь для маршрутов сканера: зарегистрированный или гость (один бесплатный скан). */
+export async function requireScanUser(): Promise<SessionUser | NextResponse> {
+  const user = await getSessionUserOrGuest();
+  if (!user) return err("Требуется вход в систему", 401);
+  return user;
+}

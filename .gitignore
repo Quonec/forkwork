@@ -26,3 +26,7 @@ next-env.d.ts
 
 # SQLite база данных (создаётся автоматически)
 /data/
+
+# кэш импорта заведений
+/seed/.tiles-cache.json
+/seed/import.log

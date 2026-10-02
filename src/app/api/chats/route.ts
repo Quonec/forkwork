@@ -1,17 +1,21 @@
 import { db, nowIso } from "@/lib/db";
 import { json, err, requireUser, isResponse } from "@/lib/api";
+import { purgeExpired } from "@/lib/chat";
 
 export async function GET() {
   const user = await requireUser();
   if (isResponse(user)) return user;
+  purgeExpired();
+  const uid = Number(user.id);
   // Чаты, где пользователь — заказчик, либо повар (через профиль повара)
   const chats = db
     .prepare(
       `SELECT ch.id, ch.status, ch.created_at AS createdAt,
         cust.name AS customerName, cust.avatar AS customerAvatar, cust.id AS customerId,
         chefu.name AS chefName, chefu.avatar AS chefAvatar, c.id AS chefId, c.user_id AS chefUserId,
-        (SELECT text FROM chat_messages m WHERE m.chat_id = ch.id ORDER BY m.created_at DESC LIMIT 1) AS lastMessage,
-        (SELECT created_at FROM chat_messages m WHERE m.chat_id = ch.id ORDER BY m.created_at DESC LIMIT 1) AS lastAt
+        (SELECT CASE WHEN m.deleted_at IS NOT NULL THEN 'Сообщение удалено' WHEN m.enc = 1 THEN 'Зашифрованное сообщение' WHEN m.vault = 1 THEN 'Сообщение' ELSE m.text END
+         FROM chat_messages m WHERE m.chat_id = ch.id AND m.id NOT IN (SELECT message_id FROM chat_hidden WHERE user_id = ${uid}) ORDER BY m.created_at DESC, m.id DESC LIMIT 1) AS lastMessage,
+        (SELECT created_at FROM chat_messages m WHERE m.chat_id = ch.id AND m.id NOT IN (SELECT message_id FROM chat_hidden WHERE user_id = ${uid}) ORDER BY m.created_at DESC LIMIT 1) AS lastAt
        FROM chats ch
        JOIN users cust ON cust.id = ch.customer_id
        JOIN chefs c ON c.id = ch.chef_id

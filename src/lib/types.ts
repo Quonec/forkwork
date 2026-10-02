@@ -83,8 +83,6 @@ export type StreamInfo = {
   dishIds: number[];
   pinnedMessage: string;
   tags: string;
-  visibility: "public" | "private";
-  cameraLive: number;
   chefName?: string;
   chefAvatar?: string;
   cuisineName?: string;

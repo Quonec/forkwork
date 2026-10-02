@@ -8,7 +8,7 @@ meta:
 run:
   # Порт, который слушает приложение (next start → 3000).
   containerPort: 3000
-  # Постоянный том монтируется сюда — ровно туда, куда node:sqlite
-  # пишет файл forkwork.db (process.cwd()/data == /app/data).
-  # Без этого БД обнулялась бы при каждом перезапуске контейнера.
-  persistenceMount: /app/data
+  # Постоянный том монтируется сюда. Это же значение DATA_DIR в Dockerfile:
+  # там лежат база forkwork.db и секретное хранилище чатов (secret/).
+  # Без тома всё обнулялось бы при каждом перезапуске контейнера.
+  persistenceMount: /data

@@ -24,6 +24,9 @@ export default function Footer() {
             ["/streams", "Live-стримы"],
             ["/recipes", "Рецепты"],
             ["/chefs", "Все повара"],
+            ["/venues", "Заведения"],
+            ["/scan", "Сканер блюда"],
+            ["/legal/scan", "Правила сканера"],
           ]}
         />
         <FooterCol
@@ -32,6 +35,7 @@ export default function Footer() {
             ["/register", "Стать заказчиком"],
             ["/register?role=chef", "Стать поваром"],
             ["/cabinet", "Мой кабинет"],
+            ["/chats", "Личные чаты"],
             ["/cart", "Корзина"],
           ]}
         />
@@ -39,12 +43,12 @@ export default function Footer() {
           <h4 className="mb-3 text-sm font-bold uppercase tracking-wide text-stone-400">Важно</h4>
           <p className="text-xs leading-relaxed text-stone-400">
             Платформа не заменяет санитарные и медицинские проверки. Пользователи обязаны соблюдать правила публикации
-            и общения. AI-агент носит вспомогательный характер. Расчёты ведутся во внутренней валюте платформы (FC).
+            и общения. AI-агент носит вспомогательный характер. Демонстрационная версия — платежи виртуальные (FC).
           </p>
         </div>
       </div>
       <div className="border-t border-stone-100 py-4 text-center text-xs text-stone-400">
-        © {new Date().getFullYear()} ForkWork
+        © {new Date().getFullYear()} ForkWork · MVP-демо
       </div>
     </footer>
   );

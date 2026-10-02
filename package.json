@@ -1,6 +1,6 @@
 {
   "name": "forkwork",
-  "version": "0.8.0",
+  "version": "0.9.27",
   "private": true,
   "engines": {
     "node": ">=22.5"
@@ -8,7 +8,10 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "venues:import": "node scripts/import-osm-venues.mjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.70.0",
@@ -23,6 +26,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^5.0.3"
   }
 }

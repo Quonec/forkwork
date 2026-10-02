@@ -4,6 +4,7 @@ import { ChefCardView } from "@/components/ChefCardView";
 import { StreamCardView } from "@/components/StreamCardView";
 import { RecipeCardView } from "@/components/RecipeCardView";
 import { SectionTitle, LiveBadge } from "@/components/ui";
+import HeroBubbles from "@/components/HeroBubbles";
 
 export const dynamic = "force-dynamic";
 
@@ -16,8 +17,9 @@ export default function Home() {
   return (
     <div>
       {/* Хиро */}
-      <section className="relative overflow-hidden bg-stone-950 text-white">
-        <div className="relative mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24">
+      <section className="relative isolate overflow-hidden bg-stone-950 text-white">
+        <HeroBubbles />
+        <div className="relative z-10 mx-auto grid max-w-7xl gap-10 px-4 py-16 sm:px-6 md:grid-cols-2 md:py-24">
           <div>
             <span className="chip bg-white/10 uppercase tracking-widest text-yellow-300">
               Гастрономическое путешествие по городу

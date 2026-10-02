@@ -1,9 +1,9 @@
 import { hashSync } from "bcryptjs";
 import { db, nowIso } from "@/lib/db";
-import { createSession } from "@/lib/auth";
+import { createSession, getSessionUserOrGuest } from "@/lib/auth";
+import { isGuestEmail } from "@/lib/guest";
 import { json, err } from "@/lib/api";
 import { logEvent } from "@/lib/queries";
-import { STARTER_DISHES } from "@/lib/starter-dishes";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -21,13 +21,23 @@ export async function POST(req: Request) {
   if (exists) return err("Пользователь с таким email уже зарегистрирован");
 
   const avatar = "";
-  const userId = Number(
-    db
-      .prepare(
-        "INSERT INTO users (email, pass_hash, name, role, avatar, onboarded, created_at) VALUES (?,?,?,?,?,0,?)"
-      )
-      .run(email, hashSync(password, 8), name, role, avatar, nowIso()).lastInsertRowid
-  );
+  // Гость сканера регистрируется «на месте»: тот же аккаунт, его скан остаётся в истории.
+  const guest = await getSessionUserOrGuest();
+  let userId: number;
+  if (guest && isGuestEmail(guest.email)) {
+    userId = guest.id;
+    db.prepare("UPDATE users SET email = ?, pass_hash = ?, name = ?, role = ?, onboarded = 0, created_at = ? WHERE id = ?").run(
+      email, hashSync(password, 8), name, role, nowIso(), userId
+    );
+  } else {
+    userId = Number(
+      db
+        .prepare(
+          "INSERT INTO users (email, pass_hash, name, role, avatar, onboarded, created_at) VALUES (?,?,?,?,?,0,?)"
+        )
+        .run(email, hashSync(password, 8), name, role, avatar, nowIso()).lastInsertRowid
+    );
+  }
   db.prepare("INSERT INTO wallets (user_id, balance) VALUES (?, 500)").run(userId);
   db.prepare("INSERT INTO transactions (user_id, type, amount, comment, ref, created_at) VALUES (?,?,?,?,?,?)").run(
     userId, "topup", 500, "Приветственный бонус ForkWork", "", nowIso()
@@ -35,24 +45,9 @@ export async function POST(req: Request) {
 
   if (role === "chef") {
     // Профиль повара создаётся сразу, заполняется в кабинете
-    const chefId = Number(
-      db.prepare("INSERT INTO chefs (user_id, bio, specialization) VALUES (?,?,?)").run(
-        userId, "", String(body.specialization ?? "").trim()
-      ).lastInsertRowid
+    db.prepare("INSERT INTO chefs (user_id, bio, specialization) VALUES (?,?,?)").run(
+      userId, "", String(body.specialization ?? "").trim()
     );
-    // Стартовое меню: выбранные при регистрации блюда из общего каталога
-    const picked: number[] = Array.isArray(body.starterDishes)
-      ? [...new Set<number>(body.starterDishes.map(Number))]
-          .filter((i) => Number.isInteger(i) && i >= 0 && i < STARTER_DISHES.length)
-          .slice(0, 12)
-      : [];
-    const insDish = db.prepare(
-      "INSERT INTO dishes (chef_id, name, description, price, emoji, tags, available, created_at) VALUES (?,?,?,?,?,?,1,?)"
-    );
-    for (const i of picked) {
-      const d = STARTER_DISHES[i];
-      insDish.run(chefId, d.name, d.description, d.price, "", d.tags, nowIso());
-    }
   }
 
   logEvent("signup", userId, { role });

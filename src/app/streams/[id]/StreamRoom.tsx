@@ -6,8 +6,7 @@ import { useRouter } from "next/navigation";
 import type { ChefCard, Dish, SessionUser, StreamInfo } from "@/lib/types";
 import { useCart } from "@/components/cart";
 import { Stars, LiveBadge } from "@/components/ui";
-import { fmtFC } from "@/lib/format";
-import LiveVideo from "./LiveVideo";
+import { fmtFC, fmtDateTime } from "@/lib/format";
 
 type ChatMsg = { id: number; userId: number | null; authorName: string; text: string; kind: string; createdAt: string };
 type Analysis = {
@@ -25,15 +24,11 @@ export default function StreamRoom({
   chef,
   dishes,
   user,
-  isChef = false,
-  viewerKey = "",
 }: {
   stream: StreamInfo;
   chef: ChefCard | null;
   dishes: Dish[];
   user: SessionUser | null;
-  isChef?: boolean;
-  viewerKey?: string;
 }) {
   const router = useRouter();
   const cart = useCart();
@@ -46,17 +41,16 @@ export default function StreamRoom({
   const chatRef = useRef<HTMLDivElement>(null);
   const isLive = status === "live";
 
-  const keyQS = viewerKey ? `?key=${encodeURIComponent(viewerKey)}` : "";
   const poll = useCallback(async () => {
     try {
-      const res = await fetch(`/api/streams/${stream.id}/messages${keyQS}`);
+      const res = await fetch(`/api/streams/${stream.id}/messages`);
       if (!res.ok) return;
       const data = await res.json();
       setMessages(data.messages);
       setViewers(data.viewers);
       setStatus(data.status);
     } catch {}
-  }, [stream.id, keyQS]);
+  }, [stream.id]);
 
   useEffect(() => {
     poll();
@@ -90,7 +84,7 @@ export default function StreamRoom({
     await fetch(`/api/streams/${stream.id}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ text, kind, key: viewerKey }),
+      body: JSON.stringify({ text, kind }),
     });
     setInput("");
     poll();
@@ -105,22 +99,29 @@ export default function StreamRoom({
       <div className="grid gap-4 lg:grid-cols-[1fr_380px]">
         {/* Левая колонка: видео + инфо */}
         <div className="space-y-4">
-          {/* Видео: живая камера повара (WebRTC) либо заставка */}
+          {/* «Видео» */}
           <div className="relative aspect-video overflow-hidden rounded-xl bg-stone-950">
-            <LiveVideo
-              streamId={stream.id}
-              title={stream.title}
-              status={status}
-              scheduledAt={stream.scheduledAt}
-              isChef={isChef}
-              viewerKey={viewerKey}
-            />
+            <div className="absolute inset-0 flex flex-col items-center justify-center text-white">
+              <div className="steam mb-2 text-2xl font-bold text-orange-300/70">
+                <span>~</span>
+                <span>~</span>
+                <span>~</span>
+              </div>
+              <div className="font-display text-7xl font-bold text-orange-300/60">
+                {(stream.title.trim().charAt(0) || "F").toUpperCase()}
+              </div>
+              <p className="mt-4 max-w-md px-6 text-center text-lg font-bold">{stream.title}</p>
+              {!isLive && (
+                <p className="mt-2 text-sm text-stone-400">
+                  {status === "scheduled"
+                    ? `Эфир начнётся: ${stream.scheduledAt ? fmtDateTime(stream.scheduledAt) : "скоро"}`
+                    : "Эфир завершён. Спасибо, что были с нами!"}
+                </p>
+              )}
+            </div>
             <div className="absolute left-4 top-4 flex items-center gap-2">
               {isLive ? <LiveBadge /> : <span className="chip bg-stone-700 text-white">{status === "scheduled" ? "Скоро" : "Завершён"}</span>}
               {isLive && <span className="chip bg-black/50 text-white">{viewers} зрит.</span>}
-              {stream.visibility === "private" && (
-                <span className="chip bg-orange-500 text-white">Индивидуальный эфир</span>
-              )}
             </div>
             {/* Плавающие реакции */}
             <div className="pointer-events-none absolute bottom-4 right-6">

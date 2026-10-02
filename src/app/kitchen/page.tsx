@@ -1,12 +1,11 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, Suspense } from "react";
+import { useCallback, useEffect, useState, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { fmtFC, fmtDateTime, timeAgo } from "@/lib/format";
 import { StatusChip } from "@/components/StatusChip";
 import CameraStudio from "@/components/CameraStudio";
-import LocationPicker from "@/components/LocationPicker";
 import { Stranded } from "@/components/ui";
 import { ORDER_FLOW, ORDER_STATUS_RU, type CartItem } from "@/lib/types";
 
@@ -14,7 +13,7 @@ type KitchenData = {
   profile: { id: number; bio: string; specialization: string; cuisineId: number | null; lat: number | null; lng: number | null; address: string; priceLevel: number; available: number; delivery: number; pickup: number; workHours: string };
   dishes: { id: number; name: string; description: string; price: number; emoji: string; tags: string; available: number }[];
   recipes: { id: number; title: string; timeMin: number; difficulty: number; emoji: string }[];
-  streams: { id: number; title: string; status: string; scheduledAt: string | null; startedAt: string | null; viewers: number; pinnedMessage: string; visibility: "public" | "private"; accessKey: string }[];
+  streams: { id: number; title: string; status: string; scheduledAt: string | null; startedAt: string | null; viewers: number; pinnedMessage: string }[];
   orders: { id: number; status: string; items: CartItem[]; total: number; fee: number; deliveryType: string; address: string; source: string; createdAt: string; customerName: string }[];
   chats: { id: number; status: string; createdAt: string; customerName: string; customerAvatar: string }[];
   reviews: { id: number; rating: number; text: string; chefReply: string; createdAt: string; authorName: string; authorAvatar: string; status: string }[];
@@ -33,70 +32,25 @@ const TABS = [
   ["wallet", "Финансы"],
 ] as const;
 
-// Короткий «динь» о новом заказе; без жеста пользователя браузер может
-// запретить звук — тогда остаётся визуальный тост
-function chime() {
-  try {
-    const ctx = new AudioContext();
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-    osc.type = "sine";
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.12, ctx.currentTime);
-    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
-    osc.connect(gain).connect(ctx.destination);
-    osc.start();
-    osc.stop(ctx.currentTime + 0.4);
-    osc.onended = () => ctx.close();
-  } catch {}
-}
-
-type OrderToast = { key: number; orderId: number; customer: string; summary: string; total: number };
-
 function Kitchen() {
   const params = useSearchParams();
-  const tab = params.get("tab") ?? "overview";
+  // Неизвестная вкладка в адресе — открываем первую, а не пустую страницу.
+  const raw = params.get("tab");
+  const tab = TABS.some(([k]) => k === raw) ? raw! : "overview";
   const [data, setData] = useState<KitchenData | null>(null);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
-  const [toasts, setToasts] = useState<OrderToast[]>([]);
-  const lastOrderIdRef = useRef<number | null>(null);
 
   const load = useCallback(async () => {
     const res = await fetch("/api/kitchen");
     if (res.status === 401) return (window.location.href = "/login");
-    const d = (await res.json()) as KitchenData & { error?: string };
-    if (!res.ok) return setError(d.error ?? "Ошибка");
+    const d = await res.json();
+    if (!res.ok) return setError(d.error);
     setData(d);
-
-    // Live-уведомления: заказы с id больше уже виденного всплывают тостом
-    const maxId = d.orders.reduce((m, o) => Math.max(m, o.id), 0);
-    if (lastOrderIdRef.current !== null && maxId > lastOrderIdRef.current) {
-      const fresh = d.orders.filter((o) => o.id > (lastOrderIdRef.current ?? 0) && o.status === "new");
-      if (fresh.length > 0) {
-        chime();
-        const newToasts: OrderToast[] = fresh.map((o) => ({
-          key: Date.now() + o.id,
-          orderId: o.id,
-          customer: o.customerName,
-          summary: o.items.map((i) => `${i.name} ×${i.qty}`).join(", "),
-          total: o.total,
-        }));
-        setToasts((t) => [...t, ...newToasts]);
-        // тост живёт 12 секунд
-        setTimeout(() => {
-          setToasts((t) => t.filter((x) => !newToasts.some((n) => n.key === x.key)));
-        }, 12_000);
-      }
-    }
-    lastOrderIdRef.current = maxId;
   }, []);
 
   useEffect(() => {
     load();
-    // Кухня живая: новые заказы подтягиваются сами, без обновления страницы
-    const t = setInterval(load, 5000);
-    return () => clearInterval(t);
   }, [load]);
 
   const act = async (body: Record<string, unknown>, okNote = "") => {
@@ -118,28 +72,6 @@ function Kitchen() {
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-8 sm:px-6">
-      {/* Live-уведомления о новых заказах */}
-      {toasts.length > 0 && (
-        <div className="fixed right-4 top-20 z-[1300] w-[min(340px,calc(100vw-2rem))] space-y-2">
-          {toasts.map((t) => (
-            <Link
-              key={t.key}
-              href="/kitchen?tab=orders"
-              onClick={() => setToasts((ts) => ts.filter((x) => x.key !== t.key))}
-              className="toast-in card block border-l-4 border-l-orange-500 p-3.5 shadow-xl"
-            >
-              <div className="flex items-center gap-2">
-                <span className="live-dot inline-block h-2.5 w-2.5 rounded-full bg-orange-500" />
-                <p className="text-sm font-extrabold">Новый заказ #{t.orderId}</p>
-                <p className="ml-auto text-sm font-extrabold text-orange-600">{fmtFC(t.total)}</p>
-              </div>
-              <p className="mt-1 truncate text-xs text-stone-600">{t.summary}</p>
-              <p className="text-[11px] text-stone-400">от {t.customer} · нажмите, чтобы открыть заказы</p>
-            </Link>
-          ))}
-        </div>
-      )}
-
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-extrabold">Поварской кабинет</h1>
@@ -208,9 +140,8 @@ function Kitchen() {
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="font-bold">
-                      #{o.id} · {o.customerName}
+                      <Link href={`/orders/${o.id}`} className="hover:text-orange-600">#{o.id}</Link> · {o.customerName}
                       {o.source === "stream" && <span className="ml-2 chip bg-red-50 px-2 py-0.5 text-[10px] text-red-600">из стрима</span>}
-                      {o.source === "ai" && <span className="ml-2 chip bg-orange-100 px-2 py-0.5 text-[10px] text-orange-700">через AI</span>}
                     </p>
                     <p className="truncate text-xs text-stone-500">{o.items.map((i) => `${i.name} ×${i.qty}`).join(", ")}</p>
                     <p className="text-[11px] text-stone-400">
@@ -452,7 +383,6 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
   const [selDishes, setSelDishes] = useState<number[]>([]);
   const [startNow, setStartNow] = useState(true);
   const [scheduledAt, setScheduledAt] = useState("");
-  const [visibility, setVisibility] = useState<"public" | "private">("public");
 
   const toggleDish = (id: number) =>
     setSelDishes((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
@@ -476,22 +406,6 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
             ))}
           </div>
         </div>
-        <div>
-          <p className="label">Тип эфира</p>
-          <div className="flex gap-1.5">
-            <button onClick={() => setVisibility("public")} className={`chip ${visibility === "public" ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-600"}`}>
-              Публичный
-            </button>
-            <button onClick={() => setVisibility("private")} className={`chip ${visibility === "private" ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-600"}`}>
-              Индивидуальный
-            </button>
-          </div>
-          {visibility === "private" && (
-            <p className="mt-1.5 text-[11px] text-stone-400">
-              Эфир не попадёт в каталог. После создания появится личная ссылка с ключом — отправьте её приглашённым.
-            </p>
-          )}
-        </div>
         <label className="flex items-center gap-2 text-sm">
           <input type="checkbox" checked={startNow} onChange={(e) => setStartNow(e.target.checked)} />
           Выйти в эфир сразу
@@ -500,14 +414,10 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
         <button
           onClick={async () => {
             const ok = await act(
-              { action: "stream_create", title, pinnedMessage: pinned, tags, dishIds: selDishes, startNow, visibility, scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined },
-              startNow
-                ? "Вы в эфире! Откройте страницу эфира и включите камеру."
-                : visibility === "private"
-                  ? "Индивидуальный эфир создан — личная ссылка в списке справа."
-                  : "Эфир запланирован"
+              { action: "stream_create", title, pinnedMessage: pinned, tags, dishIds: selDishes, startNow, scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined },
+              startNow ? "Вы в эфире!" : "Эфир запланирован"
             );
-            if (ok) { setTitle(""); setPinned(""); setTags(""); setSelDishes([]); setVisibility("public"); }
+            if (ok) { setTitle(""); setPinned(""); setTags(""); setSelDishes([]); }
           }}
           className="btn-primary w-full"
         >
@@ -521,54 +431,25 @@ function StreamsTab({ streams, dishes, act }: { streams: KitchenData["streams"];
               <span className={`chip px-2 py-0.5 text-[10px] ${s.status === "live" ? "bg-red-600 text-white" : s.status === "scheduled" ? "bg-amber-100 text-amber-700" : "bg-stone-100 text-stone-500"}`}>
                 {s.status === "live" ? "LIVE" : s.status === "scheduled" ? "ПЛАН" : "АРХИВ"}
               </span>
-              {s.visibility === "private" && <span className="chip bg-orange-100 px-2 py-0.5 text-[10px] text-orange-700">ИНДИВИД.</span>}
               <div className="min-w-0 flex-1">
                 <Link href={`/streams/${s.id}`} className="font-bold hover:text-orange-600">{s.title}</Link>
                 <p className="text-xs text-stone-400">
                   {s.status === "live" ? `в эфире · ${s.viewers} зрит.` : s.status === "scheduled" ? `запланирован: ${s.scheduledAt ? fmtDateTime(s.scheduledAt) : "—"}` : "завершён"}
                 </p>
               </div>
-              {s.status === "live" && (
-                <Link href={`/streams/${s.id}`} className="btn-primary !py-1.5 text-xs">Вещать</Link>
-              )}
               {s.status === "scheduled" && (
-                <button onClick={() => act({ action: "stream_start", id: s.id }, "Вы в эфире! Откройте страницу эфира и включите камеру.")} className="btn-primary !py-1.5 text-xs">Начать</button>
+                <button onClick={() => act({ action: "stream_start", id: s.id }, "Вы в эфире!")} className="btn-primary !py-1.5 text-xs">Начать</button>
               )}
               {s.status === "live" && (
                 <button onClick={() => act({ action: "stream_stop", id: s.id }, "Эфир завершён")} className="btn-danger !py-1.5 text-xs">Завершить</button>
               )}
             </div>
-            {s.visibility === "private" && s.status !== "ended" && <ShareLink streamId={s.id} accessKey={s.accessKey} />}
             {s.status === "live" && <PinEditor streamId={s.id} current={s.pinnedMessage} act={act} />}
           </div>
         ))}
         {streams.length === 0 && <p className="text-sm text-stone-500">Эфиров ещё не было. Самое время начать!</p>}
       </div>
       </div>
-    </div>
-  );
-}
-
-function ShareLink({ streamId, accessKey }: { streamId: number; accessKey: string }) {
-  const [copied, setCopied] = useState(false);
-  const link = () => `${window.location.origin}/streams/${streamId}?key=${encodeURIComponent(accessKey)}`;
-  const copy = async () => {
-    try {
-      await navigator.clipboard.writeText(link());
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      window.prompt("Скопируйте личную ссылку:", link());
-    }
-  };
-  return (
-    <div className="mt-3 flex items-center gap-2 rounded-xl bg-orange-50 px-3 py-2">
-      <p className="min-w-0 flex-1 truncate text-xs text-orange-700">
-        Личная ссылка: /streams/{streamId}?key={accessKey}
-      </p>
-      <button onClick={copy} className="btn-secondary shrink-0 !py-1 text-[11px]">
-        {copied ? "Скопировано" : "Копировать"}
-      </button>
     </div>
   );
 }
@@ -615,10 +496,14 @@ function ProfileTab({ profile, act }: { profile: KitchenData["profile"]; act: (b
           <label className="label">Часы работы</label>
           <input className="input" value={form.workHours} onChange={(e) => setForm({ ...form, workHours: e.target.value })} />
         </div>
-      </div>
-      <div>
-        <label className="label">Локация на карте</label>
-        <LocationPicker lat={form.lat} lng={form.lng} onChange={(lat, lng) => setForm((f) => ({ ...f, lat, lng }))} />
+        <div>
+          <label className="label">Широта (карта)</label>
+          <input type="number" step="0.0001" className="input" value={form.lat ?? ""} onChange={(e) => setForm({ ...form, lat: e.target.value ? Number(e.target.value) : null })} placeholder="55.75" />
+        </div>
+        <div>
+          <label className="label">Долгота (карта)</label>
+          <input type="number" step="0.0001" className="input" value={form.lng ?? ""} onChange={(e) => setForm({ ...form, lng: e.target.value ? Number(e.target.value) : null })} placeholder="37.62" />
+        </div>
       </div>
       <div className="flex flex-wrap items-center gap-4">
         <div>

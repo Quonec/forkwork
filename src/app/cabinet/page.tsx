@@ -21,7 +21,9 @@ const TABS = [
 function Cabinet() {
   const params = useSearchParams();
   const router = useRouter();
-  const tab = params.get("tab") ?? "overview";
+  // Неизвестная вкладка в адресе — открываем первую, а не пустую страницу.
+  const raw = params.get("tab");
+  const tab = TABS.some(([k]) => k === raw) ? raw! : "overview";
 
   const [user, setUser] = useState<SessionUser | null>(null);
   const [orders, setOrders] = useState<OrderRow[]>([]);
@@ -87,7 +89,7 @@ function Cabinet() {
         </span>
         <div>
           <h1 className="text-2xl font-extrabold">{user.name}</h1>
-          <p className="text-sm text-stone-500">{user.email} · {user.role === "chef" ? "повар" : user.role === "admin" ? "администратор" : "заказчик"}</p>
+          <p className="text-sm text-stone-500">{user.email} · {user.role === "chef" ? "повар" : user.role === "admin" ? "администратор" : user.role === "manager" ? "менеджер" : "заказчик"}</p>
         </div>
         <div className="ml-auto text-right">
           <p className="text-xs text-stone-400">Баланс</p>
@@ -176,7 +178,7 @@ function Cabinet() {
       {tab === "wallet" && (
         <div className="mt-6 grid gap-4 md:grid-cols-[300px_1fr]">
           <div className="card h-fit p-6">
-            <p className="text-xs font-bold uppercase tracking-wide text-stone-400">Пополнение кошелька</p>
+            <p className="text-xs font-bold uppercase tracking-wide text-stone-400">Пополнение (демо)</p>
             <div className="mt-3 flex gap-1.5">
               {[500, 1000, 3000].map((v) => (
                 <button key={v} onClick={() => setTopup(v)} className={`chip flex-1 justify-center ${topup === v ? "bg-orange-500 text-white" : "bg-stone-100 text-stone-600"}`}>

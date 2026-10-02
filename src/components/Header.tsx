@@ -3,13 +3,15 @@ import { getSessionUser } from "@/lib/auth";
 import { db } from "@/lib/db";
 import { fmtFC } from "@/lib/format";
 import CartBadge from "./CartBadge";
-import ThemePicker from "./ThemePicker";
 
 const NAV = [
   { href: "/map", label: "Карта" },
   { href: "/streams", label: "Стримы" },
   { href: "/chefs", label: "Повара" },
   { href: "/recipes", label: "Рецепты" },
+  { href: "/scan", label: "Скан" },
+  { href: "/venues", label: "Заведения" },
+  { href: "/favorites", label: "Любимое" },
 ];
 
 export default async function Header() {
@@ -26,7 +28,7 @@ export default async function Header() {
           <span className="font-display flex h-9 w-9 items-center justify-center rounded-xl bg-yellow-400 text-base text-stone-950">
             FW
           </span>
-          <span className="font-display text-lg tracking-tight">
+          <span className={`font-display text-lg tracking-tight ${user ? "" : "max-[430px]:hidden"}`}>
             Fork<span className="text-orange-600">Work</span>
           </span>
         </Link>
@@ -36,6 +38,7 @@ export default async function Header() {
             <Link
               key={n.href}
               href={n.href}
+              data-hint={n.href === "/scan" ? "scan" : undefined}
               className="rounded-lg px-3 py-2 text-sm font-medium text-stone-600 hover:bg-stone-100 hover:text-stone-900"
             >
               {n.label}
@@ -53,7 +56,6 @@ export default async function Header() {
               {fmtFC(balance)}
             </Link>
           )}
-          <ThemePicker />
           <CartBadge />
           {user ? (
             <details className="group relative">
@@ -74,6 +76,7 @@ export default async function Header() {
                 {user.role === "chef" && <MenuLink href="/kitchen" label="Поварской кабинет" />}
                 {user.role === "manager" && <MenuLink href="/manager" label="Кабинет менеджера" />}
                 {user.role === "admin" && <MenuLink href="/admin" label="Админ-панель" />}
+                <MenuLink href="/scan" label="Скан блюда" />
                 <MenuLink href="/chats" label="Личные чаты" />
                 <a href="/api/auth/logout" className="block rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50">
                   Выйти

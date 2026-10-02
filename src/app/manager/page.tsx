@@ -37,35 +37,32 @@ const KIND_RU: Record<string, [string, string]> = {
 
 function Manager() {
   const params = useSearchParams();
-  const tab = params.get("tab") ?? "overview";
-  // Ответ храним вместе с view, для которого он загружен: при быстром
-  // переключении вкладок поздний ответ старой вкладки не попадёт в рендер
-  // новой (иначе data.chefs от ответа overview — undefined и краш)
-  const [loaded, setLoaded] = useState<{ view: string; data: Record<string, unknown> } | null>(null);
+  // Неизвестная вкладка в адресе — открываем первую, а не пустую страницу.
+  const raw = params.get("tab");
+  const tab = TABS.some(([k]) => k === raw) ? raw! : "overview";
+  // Данные помечены вкладкой, для которой загружены: при переключении старый ответ
+  // не попадает в новую вкладку (иначе, например, chefs ещё undefined и страница падает).
+  const [loaded, setData] = useState<(Record<string, unknown> & { __view: string }) | null>(null);
   const [error, setError] = useState("");
   const [note, setNote] = useState("");
 
   const view = tab === "transfer" ? "managers" : tab;
 
+  const data = loaded?.__view === view ? loaded : null;
+
   const load = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/manager?view=${view}`);
-      if (res.status === 401) return (window.location.href = "/login");
-      const d = await res.json().catch(() => null);
-      if (!res.ok || !d) return setError(d?.error ?? "Нет доступа");
-      setError("");
-      setLoaded({ view, data: d });
-    } catch {
-      setError("Сервер недоступен — обновите страницу");
-    }
+    const res = await fetch(`/api/manager?view=${view}`);
+    if (res.status === 401) return (window.location.href = "/login");
+    const d = await res.json();
+    if (!res.ok) return setError(d.error ?? "Нет доступа");
+    setError("");
+    setData({ ...d, __view: view });
   }, [view]);
 
   useEffect(() => {
+    setData(null);
     load();
   }, [load]);
-
-  // Данные показываем только если они от текущей вкладки
-  const data = loaded && loaded.view === view ? loaded.data : null;
 
   const act = async (body: Record<string, unknown>, okNote = "Готово") => {
     const res = await fetch("/api/manager", {
@@ -100,14 +97,10 @@ function Manager() {
       {note && <p className="mt-4 rounded-xl bg-amber-50 px-4 py-2.5 text-sm text-amber-700">{note}</p>}
       {!data && <div className="py-16 text-center text-stone-400">Загружаем…</div>}
 
-      {data && tab === "overview" && !!data.totals && (
-        <Overview totals={data.totals as Totals} attention={(data.attention as { chef: string; chefId: number; issue: string }[]) ?? []} />
-      )}
-      {data && tab === "chefs" && <Chefs chefs={(data.chefs as Chef[]) ?? []} act={act} />}
-      {data && tab === "clients" && <Clients clients={(data.clients as Client[]) ?? []} />}
-      {data && tab === "transfer" && (
-        <Transfer managers={(data.managers as ManagerOpt[]) ?? []} assignments={(data.assignments as Assignment[]) ?? []} act={act} />
-      )}
+      {data && tab === "overview" && <Overview totals={data.totals as Totals} attention={data.attention as { chef: string; chefId: number; issue: string }[]} />}
+      {data && tab === "chefs" && <Chefs chefs={data.chefs as Chef[]} act={act} />}
+      {data && tab === "clients" && <Clients clients={data.clients as Client[]} />}
+      {data && tab === "transfer" && <Transfer managers={data.managers as ManagerOpt[]} assignments={data.assignments as Assignment[]} act={act} />}
     </div>
   );
 }

@@ -3,6 +3,18 @@ import { hashSync } from "bcryptjs";
 import path from "node:path";
 import fs from "node:fs";
 
+/** Каталог данных: на сервере задаётся DATA_DIR (подключённый постоянный диск), локально — ./data. */
+export const DATA_DIR = process.env.DATA_DIR ? path.resolve(process.env.DATA_DIR) : path.join(process.cwd(), "data");
+
+/** Демо-данные и демо-аккаунты: в разработке да, в продакшене только при SEED_DEMO=1. */
+const DEMO_MODE = process.env.NODE_ENV !== "production" || process.env.SEED_DEMO === "1";
+
+const CUISINE_SEED: [string, string][] = [
+  ["Итальянская", ""], ["Узбекская", ""], ["Грузинская", ""], ["Японская", ""],
+  ["Веганская", ""], ["Турецкая", ""], ["Выпечка и десерты", ""], ["Корейская", ""],
+  ["Русская", ""],
+];
+
 const SCHEMA = `
 CREATE TABLE IF NOT EXISTS users (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -76,19 +88,7 @@ CREATE TABLE IF NOT EXISTS streams (
   recipe_id INTEGER,
   pinned_message TEXT NOT NULL DEFAULT '',
   tags TEXT NOT NULL DEFAULT '',
-  bot_cursor INTEGER NOT NULL DEFAULT 0,
-  visibility TEXT NOT NULL DEFAULT 'public',
-  access_key TEXT NOT NULL DEFAULT '',
-  camera_live INTEGER NOT NULL DEFAULT 0
-);
-CREATE TABLE IF NOT EXISTS rtc_signals (
-  id INTEGER PRIMARY KEY AUTOINCREMENT,
-  stream_id INTEGER NOT NULL,
-  sender TEXT NOT NULL,
-  target TEXT NOT NULL,
-  type TEXT NOT NULL,
-  payload TEXT NOT NULL DEFAULT '',
-  created_at TEXT NOT NULL
+  bot_cursor INTEGER NOT NULL DEFAULT 0
 );
 CREATE TABLE IF NOT EXISTS stream_messages (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -210,11 +210,7 @@ function seed(db: DatabaseSync) {
   // --- кухни ---
   const insCuisine = db.prepare("INSERT INTO cuisines (name, emoji) VALUES (?,?)");
   const cuisineIds: Record<string, number> = {};
-  for (const [name, emoji] of [
-    ["Итальянская", ""], ["Узбекская", ""], ["Грузинская", ""], ["Японская", ""],
-    ["Веганская", ""], ["Турецкая", ""], ["Выпечка и десерты", ""], ["Корейская", ""],
-    ["Русская", ""],
-  ] as const) {
+  for (const [name, emoji] of CUISINE_SEED) {
     cuisineIds[name] = Number(insCuisine.run(name, emoji).lastInsertRowid);
   }
 
@@ -362,11 +358,6 @@ function seed(db: DatabaseSync) {
     JSON.stringify([dSushi]), null, "", "суши,япония");
   insStream.run(sofia, "Кимчи с нуля: день первый", "scheduled", inHours(44), null, null, 0,
     JSON.stringify([dRamyeon]), null, "", "корея,ферментация");
-  // Индивидуальный (приватный) эфир — доступ только по личной ссылке с ключом
-  db.prepare(
-    "INSERT INTO streams (chef_id, title, status, scheduled_at, viewers, dish_ids, recipe_id, pinned_message, tags, visibility, access_key) VALUES (?,?,?,?,?,?,?,?,?,?,?)"
-  ).run(marco, "Индивидуальный мастер-класс: паста для своих", "scheduled", inHours(6), 0,
-    JSON.stringify([dCarbonara]), rCarbonara, "Закрытый эфир — вход по личной ссылке от повара", "паста,индивидуально", "private", "MARCO-VIP");
 
   // --- сообщения в стримах ---
   const insSMsg = db.prepare(
@@ -410,10 +401,6 @@ function seed(db: DatabaseSync) {
   order(denisId, sofia, "delivering",
     [{ dishId: dRamyeon, name: "Рамён с кимчи", price: 450, qty: 1, emoji: "" }],
     450, "delivery", "map", minsAgo(35));
-  // Заказ, оформленный через AI-агента прямо из чата
-  order(kirillId, polina, "new",
-    [{ dishId: dBowl, name: "Будда-боул", price: 490, qty: 1, emoji: "" }],
-    490, "pickup", "ai", minsAgo(3));
 
   // --- отзывы ---
   const insReview = db.prepare(
@@ -500,7 +487,6 @@ function seed(db: DatabaseSync) {
     insEvent.run("stream_view", anyaId, JSON.stringify({ streamId: sMarco }), daysAgo(d));
     if (d % 2 === 0) insEvent.run("stream_view", lenaId, JSON.stringify({ streamId: sNino }), daysAgo(d));
     if (d % 3 === 0) insEvent.run("order_created", anyaId, JSON.stringify({ source: "stream" }), daysAgo(d));
-    if (d % 4 === 0) insEvent.run("order_created", kirillId, JSON.stringify({ source: "ai" }), daysAgo(d));
   }
 }
 
@@ -542,31 +528,58 @@ const sleepSync = (ms: number) => {
   Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, ms);
 };
 
+/** Добавляет колонку, если её ещё нет (схема выше создаёт только новые базы). */
+function ensureColumn(db: DatabaseSync, table: string, column: string, ddl: string) {
+  const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+  if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+}
+
+function migrate(db: DatabaseSync) {
+  // Сквозное шифрование и удаление сообщений в личных чатах.
+  ensureColumn(db, "chat_messages", "enc", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "chat_messages", "deleted_at", "TEXT");
+  ensureColumn(db, "users", "chat_pubkey", "TEXT");
+  // «Удалить у себя» и автоудаление по таймеру.
+  ensureColumn(db, "chats", "ttl_seconds", "INTEGER NOT NULL DEFAULT 0");
+  ensureColumn(db, "chat_messages", "expires_at", "TEXT");
+  // Шифрование включается на каждый чат отдельно; тексты без него лежат в секретном хранилище (vault).
+  ensureColumn(db, "chats", "e2ee", "INTEGER NOT NULL DEFAULT 1");
+  ensureColumn(db, "chat_messages", "vault", "INTEGER NOT NULL DEFAULT 0");
+  db.exec("CREATE TABLE IF NOT EXISTS chat_hidden (message_id INTEGER NOT NULL, user_id INTEGER NOT NULL, PRIMARY KEY (message_id, user_id))");
+}
+
+/** Первый запуск в продакшене: только справочники и администратор из ADMIN_EMAIL / ADMIN_PASSWORD. */
+function seedProduction(db: DatabaseSync) {
+  const insCuisine = db.prepare("INSERT INTO cuisines (name, emoji) VALUES (?,?)");
+  for (const [name, emoji] of CUISINE_SEED) insCuisine.run(name, emoji);
+  const email = process.env.ADMIN_EMAIL?.trim().toLowerCase();
+  const password = process.env.ADMIN_PASSWORD ?? "";
+  if (!email || password.length < 10) {
+    console.warn("[db] Администратор не создан: задайте ADMIN_EMAIL и ADMIN_PASSWORD (не короче 10 символов).");
+    return;
+  }
+  const id = Number(
+    db
+      .prepare("INSERT INTO users (email, pass_hash, name, role, avatar, onboarded, created_at) VALUES (?,?,?,?,?,1,?)")
+      .run(email, hashSync(password, 10), "Администратор", "admin", "", nowIso()).lastInsertRowid,
+  );
+  db.prepare("INSERT OR IGNORE INTO wallets (user_id, balance) VALUES (?, 0)").run(id);
+}
+
 function open(): DatabaseSync {
-  const dir = path.join(process.cwd(), "data");
-  fs.mkdirSync(dir, { recursive: true });
-  const db = new DatabaseSync(path.join(dir, "forkwork.db"));
+  fs.mkdirSync(DATA_DIR, { recursive: true });
+  const db = new DatabaseSync(path.join(DATA_DIR, "forkwork.db"));
   db.exec("PRAGMA busy_timeout = 8000;");
   db.exec("PRAGMA journal_mode = WAL;");
   db.exec(SCHEMA);
-  // Догоняющая миграция для БД, созданных до появления приватных эфиров.
-  // Гонка параллельных процессов (`duplicate column`) безопасно игнорируется.
-  for (const ddl of [
-    "ALTER TABLE streams ADD COLUMN visibility TEXT NOT NULL DEFAULT 'public'",
-    "ALTER TABLE streams ADD COLUMN access_key TEXT NOT NULL DEFAULT ''",
-    "ALTER TABLE streams ADD COLUMN camera_live INTEGER NOT NULL DEFAULT 0",
-  ]) {
-    try {
-      db.exec(ddl);
-    } catch {}
-  }
+  migrate(db);
   // Сид первого запуска: защищён от гонок параллельных процессов (например, воркеров next build)
   for (let attempt = 0; ; attempt++) {
     try {
       db.exec("BEGIN IMMEDIATE");
       const row = db.prepare("SELECT COUNT(*) AS n FROM users").get() as { n: number };
-      if (row.n === 0) seed(db);
-      ensureManagers(db); // догоняем существующие БД, созданные до роли «Менеджер»
+      if (row.n === 0) (DEMO_MODE ? seed : seedProduction)(db);
+      if (DEMO_MODE) ensureManagers(db); // догоняем существующие БД, созданные до роли «Менеджер»
       db.exec("COMMIT");
       break;
     } catch (e) {
