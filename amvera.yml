@@ -1,0 +1,11 @@
+# Amvera Cloud settings - the same shape as the ForkWork project: build by the Dockerfile in the repository root.
+meta:
+  environment: docker
+  toolchain:
+    name: docker
+
+run:
+  # The port the server listens on (see CMD in the Dockerfile).
+  containerPort: 3000
+  # Persistent volume: players, journal and the admin password live here (FWSLOT_DATA=/data in the Dockerfile).
+  persistenceMount: /data
