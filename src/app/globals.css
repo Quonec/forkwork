@@ -1,0 +1,226 @@
+@import "tailwindcss";
+
+/* Палитра «светлая охра» поверх стандартных имён Tailwind — весь интерфейс
+   окрашивается единообразно, без правки разметки. Оттенки облегчены,
+   stone-950 играет роль фирменного «чёрного» в духе Uber,
+   yellow-400 — солнечный акцент в духе Яндекс Go */
+@theme {
+  --color-white: #fffefb;
+
+  --color-yellow-300: #ffe566;
+  --color-yellow-400: #fcd000;
+  --color-yellow-500: #efc100;
+
+  --color-stone-50: #faf6ec;
+  --color-stone-100: #f5eedb;
+  --color-stone-200: #ecdfc4;
+  --color-stone-300: #ddcca7;
+  --color-stone-400: #c0b08e;
+  --color-stone-500: #9c8c6c;
+  --color-stone-600: #7c6e54;
+  --color-stone-700: #60553f;
+  --color-stone-800: #48402e;
+  --color-stone-900: #332d20;
+  --color-stone-950: #171410;
+
+  --color-orange-50: #fdf7e5;
+  --color-orange-100: #faeeca;
+  --color-orange-200: #f3dd9f;
+  --color-orange-300: #e9c772;
+  --color-orange-400: #ddb14d;
+  --color-orange-500: #d09c2e; /* светлая охра — акцент */
+  --color-orange-600: #b28324;
+  --color-orange-700: #8f6818;
+  --color-orange-800: #6e4f12;
+  --color-orange-900: #553d0c;
+  --color-orange-950: #30220a;
+
+  --color-amber-50: #fdf9ec;
+  --color-amber-100: #faf2d4;
+  --color-amber-200: #f4e3ad;
+  --color-amber-300: #ecd180;
+  --color-amber-400: #e0ba55;
+  --color-amber-500: #d4a534;
+  --color-amber-600: #b98d22;
+  --color-amber-700: #967017;
+  --color-amber-800: #745612;
+  --color-amber-900: #59420d;
+}
+
+body {
+  @apply bg-stone-50 text-stone-950 antialiased;
+  font-family: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  letter-spacing: -0.01em;
+}
+
+/* Акцидентный гротеск для монограмм, цифр и крупных заголовков */
+.font-display {
+  font-family: "Helvetica Neue", Helvetica, Arial, ui-sans-serif, system-ui, sans-serif;
+  font-weight: 800;
+  letter-spacing: -0.03em;
+}
+
+@layer components {
+  .card {
+    @apply bg-white rounded-2xl ring-1 ring-stone-200/80 shadow-sm;
+  }
+  .btn,
+  .btn-primary,
+  .btn-secondary,
+  .btn-ghost,
+  .btn-danger {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 text-sm font-semibold transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply bg-yellow-400 text-stone-950 hover:bg-yellow-300;
+  }
+  .btn-secondary {
+    @apply bg-stone-100 text-stone-900 hover:bg-stone-200;
+  }
+  .btn-ghost {
+    @apply text-stone-700 hover:bg-stone-100;
+  }
+  .btn-danger {
+    @apply bg-red-50 text-red-600 hover:bg-red-100;
+  }
+  .input {
+    @apply w-full rounded-xl border border-transparent bg-stone-100 px-3.5 py-2.5 text-sm outline-none transition-colors focus:border-stone-950 focus:bg-white placeholder:text-stone-500;
+  }
+  .chip {
+    @apply inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-medium;
+  }
+  .label {
+    @apply block text-xs font-semibold text-stone-500 mb-1.5 uppercase tracking-wide;
+  }
+}
+
+/* Кольцо-надпись вокруг затвора сканера: оборот за 28 с, без движения при reduced-motion */
+@keyframes ring-spin {
+  to { transform: rotate(360deg); }
+}
+.ring-spin {
+  animation: ring-spin 28s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ring-spin { animation: none; }
+}
+
+/* Пульс LIVE-индикатора */
+@keyframes live-pulse {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(0.85); }
+}
+.live-dot {
+  animation: live-pulse 1.4s ease-in-out infinite;
+}
+
+/* Пар над «видео» стрима */
+@keyframes steam {
+  0% { transform: translateY(0) scaleX(1); opacity: 0; }
+  20% { opacity: 0.5; }
+  100% { transform: translateY(-48px) scaleX(1.6); opacity: 0; }
+}
+.steam span {
+  animation: steam 3s ease-out infinite;
+  display: inline-block;
+}
+.steam span:nth-child(2) { animation-delay: 1s; }
+.steam span:nth-child(3) { animation-delay: 2s; }
+
+/* Плавное появление сообщений чата */
+@keyframes msg-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.msg-in { animation: msg-in 0.25s ease-out; }
+
+/* Карта Яндекса: прячем стандартный блок copyright-логотипа поверх плиток */
+.ymaps-2-1-79-map,
+[class*="ymaps"][class*="-map"] {
+  font: inherit;
+}
+
+/* Круги на заставке: плавно появляются и исчезают, слегка всплывая (см. FwBubbles) */
+@keyframes fw-bubble-pulse {
+  0%, 100% { opacity: 0; transform: translate3d(0, 6px, 0) scale(0.7); }
+  35%, 65% { opacity: 1; transform: translate3d(0, -8px, 0) scale(1); }
+}
+.fw-bubble { opacity: 0; animation: fw-bubble-pulse ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .fw-bubble { animation: none; opacity: 0.9; }
+}
+
+/* Стрелка подсказки к сканеру: покачивается к цели */
+@keyframes fw-hint-bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(6px); } }
+.fw-hint-arrow { animation: fw-hint-bob 1.1s ease-in-out infinite; }
+.fw-hint-arrow-up { animation-name: fw-hint-bob-up; }
+@keyframes fw-hint-bob-up { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+@media (prefers-reduced-motion: reduce) { .fw-hint-arrow { animation: none; } }
+
+/* Маршрут-книга: правая страница перелистывается от корешка, левая проявляется */
+@keyframes fw-page-turn {
+  from { transform: perspective(1400px) rotateY(-78deg); opacity: 0; }
+  to { transform: perspective(1400px) rotateY(0); opacity: 1; }
+}
+@keyframes fw-page-fade { from { opacity: 0; } to { opacity: 1; } }
+.fw-page-turn { transform-origin: left center; animation: fw-page-turn 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both; }
+.fw-page-fade { animation: fw-page-fade 0.35s ease-out both; }
+@media (prefers-reduced-motion: reduce) {
+  .fw-page-turn, .fw-page-fade { animation: none; }
+}
+
+/* ── Настройки приложения (см. src/lib/prefs.ts) ───────────────────────── */
+
+/* Цвет акцента: меняет жёлтую и охристую шкалы */
+html[data-accent="green"] {
+  --color-yellow-300: #b4e68a; --color-yellow-400: #8bd450; --color-yellow-500: #74bd3c;
+  --color-orange-50: #f1f9e8; --color-orange-100: #e1f2cc; --color-orange-200: #c8e6a2; --color-orange-300: #a8d474; --color-orange-400: #86bf49;
+  --color-orange-500: #6aa530; --color-orange-600: #538a22; --color-orange-700: #3f6d18; --color-orange-800: #30540f; --color-orange-900: #254109;
+}
+html[data-accent="blue"] {
+  --color-yellow-300: #a9dcf9; --color-yellow-400: #6ec1f5; --color-yellow-500: #4aaae6;
+  --color-orange-50: #eaf5fd; --color-orange-100: #d3eafa; --color-orange-200: #aed7f4; --color-orange-300: #84c2ec; --color-orange-400: #55a8de;
+  --color-orange-500: #338fcb; --color-orange-600: #2574ae; --color-orange-700: #1b5c8e; --color-orange-800: #144770; --color-orange-900: #0f3857;
+}
+html[data-accent="rose"] {
+  --color-yellow-300: #ffc4d3; --color-yellow-400: #ff9db5; --color-yellow-500: #f2799a;
+  --color-orange-50: #fdeff3; --color-orange-100: #fadde6; --color-orange-200: #f5bccd; --color-orange-300: #ee95b0; --color-orange-400: #e26d93;
+  --color-orange-500: #cf4a77; --color-orange-600: #b23561; --color-orange-700: #922a4f; --color-orange-800: #72213e; --color-orange-900: #5a1a32;
+}
+
+/* Тёмная тема: шкала stone переворачивается (светлый текст на тёмном фоне), поверхности и акценты подстраиваются */
+html[data-theme="dark"] {
+  --color-white: #1f1b13;
+  --color-stone-50: #14110c; --color-stone-100: #26211a; --color-stone-200: #3a3325; --color-stone-300: #54492f; --color-stone-400: #7f7254;
+  --color-stone-500: #a09274; --color-stone-600: #b9ac8f; --color-stone-700: #d0c6ae; --color-stone-800: #e2dac6; --color-stone-900: #f0eadb; --color-stone-950: #faf6ec;
+  --color-orange-50: #2a2210; --color-orange-100: #3a2f12; --color-orange-200: #55431a; --color-orange-300: #7a5f22; --color-orange-400: #a8822c;
+  --color-orange-500: #d09c2e; --color-orange-600: #e0b04c; --color-orange-700: #ecc46e; --color-orange-800: #f3d696; --color-orange-900: #f8e5b8;
+  --color-yellow-50: #2a2410; --color-yellow-100: #3a3112; --color-yellow-200: #52451a;
+  --color-amber-50: #2a2410; --color-amber-100: #3a3112; --color-amber-200: #52451a; --color-amber-700: #e0ba55; --color-amber-800: #ecd180; --color-amber-900: #f4e3ad;
+  --color-red-50: #3a1a1a; --color-red-100: #4d2020; --color-red-200: #6b2d2d; --color-red-600: #f26b6b; --color-red-700: #f58d8d;
+  --color-emerald-50: #12301f; --color-emerald-100: #18442c; --color-emerald-200: #1f5c3a; --color-emerald-600: #4cc88a; --color-emerald-700: #6fd9a2; --color-emerald-800: #98e6bd;
+  --color-violet-50: #2a2140; --color-sky-50: #14293a; --color-rose-50: #3a1a26; --color-indigo-50: #1e2240;
+}
+/* Жёлтые заливки сохраняют тёмный текст: шкала stone в тёмной теме перевёрнута */
+html[data-theme="dark"] .bg-yellow-400, html[data-theme="dark"] .bg-yellow-300, html[data-theme="dark"] .bg-yellow-500, html[data-theme="dark"] .btn-primary { color: #171410; }
+
+
+/* Тёмные поверхности (заставка, угловые кнопки, обложка книги) остаются тёмными и в тёмной теме:
+   внутри них действует исходная светлая палитра, поэтому белый текст и светлые карточки выглядят как раньше */
+html[data-theme="dark"] .bg-stone-950, html[data-theme="dark"] .bg-stone-900 {
+  --color-white: #fffefb;
+  --color-stone-50: #faf6ec; --color-stone-100: #f5eedb; --color-stone-200: #ecdfc4; --color-stone-300: #ddcca7; --color-stone-400: #c0b08e;
+  --color-stone-500: #9c8c6c; --color-stone-600: #7c6e54; --color-stone-700: #60553f; --color-stone-800: #48402e; --color-stone-900: #332d20; --color-stone-950: #171410;
+}
+
+/* Нижняя панель и размер текста */
+html[data-text="large"] { font-size: 112.5%; }
+html[data-hand="left"] .fw-live { left: auto; right: 0.75rem; }
+
+/* Меньше движения по выбору пользователя */
+html[data-motion="reduced"] *, html[data-motion="reduced"] *::before, html[data-motion="reduced"] *::after {
+  animation: none !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+html[data-motion="reduced"] .fw-bubble { opacity: 0.9; }

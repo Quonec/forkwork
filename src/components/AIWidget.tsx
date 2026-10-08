@@ -1,0 +1,138 @@
+"use client";
+
+import { useState, useRef, useEffect } from "react";
+import Link from "next/link";
+
+type Rec = { type: string; id: number | string; title: string; subtitle: string; emoji: string; href: string };
+type Msg = { from: "user" | "ai"; text: string; recs?: Rec[] };
+
+const SUGGESTIONS = ["Какие отзывы о White Rabbit?", "Рецепт от шефа из топа", "Как работает сканер?", "Что сейчас в эфире?"];
+
+export default function AIWidget() {
+  const [open, setOpen] = useState(false);
+  const [msgs, setMsgs] = useState<Msg[]>([
+    { from: "ai", text: "Здравствуйте! Я AI-агент ForkWork. Расскажу о заведениях Москвы и поварах, подберу блюдо, рецепт или эфир и объясню, как пользоваться платформой. Что интересно?" },
+  ]);
+  const [input, setInput] = useState("");
+  const [busy, setBusy] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  // Открытие по жесту на кнопке веера (BottomNav): зажатие или двойное нажатие
+  useEffect(() => {
+    const toggleAi = () => setOpen((o) => !o);
+    window.addEventListener("fw:toggle-ai", toggleAi);
+    return () => window.removeEventListener("fw:toggle-ai", toggleAi);
+  }, []);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [msgs, open]);
+
+  const ask = async (q: string) => {
+    const query = q.trim();
+    if (!query || busy) return;
+    setMsgs((m) => [...m, { from: "user", text: query }]);
+    setInput("");
+    setBusy(true);
+    try {
+      const res = await fetch("/api/ai/assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ query }),
+      });
+      const data = await res.json();
+      setMsgs((m) => [...m, { from: "ai", text: data.reply ?? "Что-то пошло не так.", recs: data.recommendations }]);
+    } catch {
+      setMsgs((m) => [...m, { from: "ai", text: "Не получилось связаться с сервером. Попробуйте ещё раз." }]);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(!open)}
+        className="font-display fixed bottom-[6.75rem] right-4 z-[1200] max-md:hidden flex h-14 w-14 items-center justify-center rounded-full bg-stone-950/40 text-lg text-white backdrop-blur-sm transition-all hover:scale-105 hover:bg-stone-950/85 focus-visible:bg-stone-950/85 md:bottom-5"
+        title="AI-агент ForkWork"
+      >
+        {open ? "✕" : "AI"}
+      </button>
+
+      {open && (
+        <div className="fixed bottom-[5.5rem] right-4 z-[1200] flex h-[460px] w-[min(380px,calc(100vw-2.5rem))] flex-col overflow-hidden rounded-xl bg-white shadow-2xl ring-1 ring-stone-200 md:bottom-24 md:h-[480px]">
+          <div className="flex items-center gap-2 bg-stone-950 px-4 py-3 text-white">
+            <span className="font-display flex h-8 w-8 items-center justify-center rounded-lg bg-white/20 text-sm font-bold">AI</span>
+            <div>
+              <p className="text-sm font-bold leading-tight">AI-агент ForkWork</p>
+              <p className="text-[11px] opacity-90">заведения · рецепты · повара · подсказки</p>
+            </div>
+            <button type="button" onClick={() => setOpen(false)} aria-label="Закрыть AI-агента" className="ml-auto flex h-8 w-8 items-center justify-center rounded-lg text-white/80 hover:bg-white/15">
+              ✕
+            </button>
+          </div>
+
+          <div className="flex-1 space-y-3 overflow-y-auto px-3 py-3">
+            {msgs.map((m, i) => (
+              <div key={i} className={`msg-in flex ${m.from === "user" ? "justify-end" : "justify-start"}`}>
+                <div className={`max-w-[85%] rounded-xl px-3 py-2 text-sm ${m.from === "user" ? "bg-stone-950 text-white" : "bg-stone-100 text-stone-900"}`}>
+                  {m.text}
+                  {m.recs && m.recs.length > 0 && (
+                    <div className="mt-2 space-y-1.5">
+                      {m.recs.map((r) => (
+                        <Link
+                          key={`${r.type}-${r.id}`}
+                          href={r.href}
+                          onClick={() => setOpen(false)}
+                          className="flex items-center gap-2 rounded-lg bg-white px-2.5 py-2 ring-1 ring-stone-200 transition-colors hover:ring-stone-950"
+                        >
+                          <span className="font-display flex h-7 w-7 shrink-0 items-center justify-center rounded-md bg-orange-100 text-xs text-stone-900/60">
+                            {r.title.trim().charAt(0).toUpperCase()}
+                          </span>
+                          <span className="min-w-0">
+                            <span className="block truncate text-xs font-semibold text-stone-800">{r.title}</span>
+                            <span className="block truncate text-[11px] text-stone-500">{r.subtitle}</span>
+                          </span>
+                        </Link>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+            {busy && <div className="px-2 text-xs text-stone-400">AI-агент подбирает варианты…</div>}
+            <div ref={bottomRef} />
+          </div>
+
+          {msgs.length <= 1 && (
+            <div className="flex flex-wrap gap-1.5 px-3 pb-2">
+              {SUGGESTIONS.map((s) => (
+                <button key={s} onClick={() => ask(s)} className="chip bg-stone-100 text-stone-700 hover:bg-stone-200">
+                  {s}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <form
+            onSubmit={(e) => {
+              e.preventDefault();
+              ask(input);
+            }}
+            className="flex gap-2 border-t border-stone-100 p-2.5"
+          >
+            <input
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              placeholder="Например: острый рамён…"
+              className="input flex-1 !py-2"
+            />
+            <button type="submit" disabled={busy || !input.trim()} className="btn-primary !px-3.5">
+              →
+            </button>
+          </form>
+        </div>
+      )}
+    </>
+  );
+}
