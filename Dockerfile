@@ -23,6 +23,15 @@ ENV NEXT_PUBLIC_YANDEX_MAPS_API_KEY=${NEXT_PUBLIC_YANDEX_MAPS_API_KEY}
 ARG NEXT_PUBLIC_SITE_URL=https://forkwork.online
 ENV NEXT_PUBLIC_SITE_URL=${NEXT_PUBLIC_SITE_URL}
 
+# Значок «Быстрый вход» (ключ) на странице входа: заказчик и повар. Менеджер и администратор
+# в нём появляются только при NEXT_PUBLIC_SHOW_DEMO_STAFF=1 — на публичном сайте не включать.
+# Ключ работает, только если демо-аккаунты есть в базе (SEED_DEMO=1 при первом запуске).
+# Для сборки без значка передайте --build-arg NEXT_PUBLIC_SHOW_DEMO=0.
+ARG NEXT_PUBLIC_SHOW_DEMO=1
+ENV NEXT_PUBLIC_SHOW_DEMO=${NEXT_PUBLIC_SHOW_DEMO}
+ARG NEXT_PUBLIC_SHOW_DEMO_STAFF=0
+ENV NEXT_PUBLIC_SHOW_DEMO_STAFF=${NEXT_PUBLIC_SHOW_DEMO_STAFF}
+
 COPY package*.json ./
 RUN npm ci
 COPY . .

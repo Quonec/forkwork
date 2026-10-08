@@ -72,6 +72,7 @@ export default function MapClient() {
   const [showVenues, setShowVenues] = useState(true);
   const [selectedVenue, setSelectedVenue] = useState<string | null>(null);
   const [tabsOpen, setTabsOpen] = useState(true);
+  const [listOpen, setListOpen] = useState(true); // нижняя лента поваров: закрывается крестиком, возвращается кнопкой
   const [mapTab, setMapTab] = useState<MapTab>("near");
   const [themeFilter, setThemeFilter] = useState("");
   const [segFilter, setSegFilter] = useState("");
@@ -406,15 +407,35 @@ export default function MapClient() {
               </Link>
             </div>
           </div>
+        ) : !listOpen ? (
+          <button
+            type="button"
+            onClick={() => setListOpen(true)}
+            className="ml-3 mb-1 rounded-full bg-white px-4 py-2 text-sm font-bold shadow-lg ring-1 ring-stone-200/80 hover:bg-stone-50 md:ml-0"
+            title="Показать поваров"
+          >
+            Повара рядом · {filtered.length} ▴
+          </button>
         ) : (
           <div className="rounded-t-2xl bg-white pb-3 pt-4 shadow-2xl ring-1 ring-stone-200/80 md:rounded-2xl">
-            <div className="flex items-baseline justify-between px-4">
+            <div className="flex items-center justify-between gap-2 px-4">
               <p className="font-bold">
                 {filtered.length} {plural(filtered.length, "повар", "повара", "поваров")} рядом
               </p>
-              {liveCount > 0 && (
-                <p className="text-xs font-bold text-red-600">{liveCount} в эфире</p>
-              )}
+              <div className="flex items-center gap-1">
+                {liveCount > 0 && (
+                  <p className="text-xs font-bold text-red-600">{liveCount} в эфире</p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setListOpen(false)}
+                  className="-my-1.5 shrink-0 rounded-lg p-1.5 text-stone-400 hover:bg-stone-100"
+                  title="Закрыть"
+                  aria-label="Закрыть список поваров"
+                >
+                  ✕
+                </button>
+              </div>
             </div>
             {filtered.length === 0 && !loading ? (
               <p className="px-4 pb-3 pt-2 text-sm text-stone-500">Никто не подошёл под фильтры. Попробуйте смягчить условия.</p>

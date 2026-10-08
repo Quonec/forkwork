@@ -4,15 +4,22 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 
-const DEMO = [
-  ["user@forkwork.ru", "user123", "Заказчик Аня"],
-  ["chef@forkwork.ru", "chef123", "Повар Марко"],
-  ["manager@forkwork.ru", "manager123", "Менеджер Ольга"],
-  ["admin@forkwork.ru", "admin123", "Администратор"],
-];
-
 /** Демо-аккаунты показываются в разработке и в продакшене только при NEXT_PUBLIC_SHOW_DEMO=1. */
 const SHOW_DEMO = process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_SHOW_DEMO === "1";
+
+/** Менеджер и администратор: в продакшене только при NEXT_PUBLIC_SHOW_DEMO_STAFF=1 (на публичном сайте это вход в кабинет администратора одной кнопкой). */
+const SHOW_STAFF = process.env.NODE_ENV !== "production" || process.env.NEXT_PUBLIC_SHOW_DEMO_STAFF === "1";
+
+const DEMO: [email: string, password: string, label: string][] = [
+  ["user@forkwork.ru", "user123", "Заказчик Аня"],
+  ["chef@forkwork.ru", "chef123", "Повар Марко"],
+  ...(SHOW_STAFF
+    ? ([
+        ["manager@forkwork.ru", "manager123", "Менеджер Ольга"],
+        ["admin@forkwork.ru", "admin123", "Администратор"],
+      ] as [string, string, string][])
+    : []),
+];
 
 export default function LoginPage() {
   const router = useRouter();
