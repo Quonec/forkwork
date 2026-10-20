@@ -18,4 +18,4 @@ export const planOf = (v: unknown) => CHEF_PLANS.find((p) => p.id === v) ?? CHEF
 
 /** Цена для показа: «Бесплатно», «1 990 ₽» или «цена уточняется». */
 export const planPrice = (p: { priceRub: number | null }) =>
-  p.priceRub === null ? "цена уточняется" : p.priceRub === 0 ? "Бесплатно" : `${p.priceRub.toLocaleString("ru-RU").replace(/ /g, " ")} ₽`;
+  p.priceRub === null ? "цена уточняется" : p.priceRub === 0 ? "Бесплатно" : `${p.priceRub.toLocaleString("ru-RU").replace(/[\u00a0\u202f]/g, " ")} ₽`;

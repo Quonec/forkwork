@@ -7,6 +7,9 @@ import { SectionTitle, LiveBadge } from "@/components/ui";
 import HeroBubbles from "@/components/HeroBubbles";
 import HomeDrawer, { DrawerBlock, type Peek } from "@/components/HomeDrawer";
 import RouteBook, { type RouteStage } from "@/components/RouteBook";
+import SellButton from "@/components/SellButton";
+import { listEditorial } from "@/lib/recipes-editorial";
+import { ensureOsmVenues } from "@/lib/venues/osm";
 
 export const dynamic = "force-dynamic";
 
@@ -69,6 +72,23 @@ export default function Home() {
   const recipes = listRecipes().slice(0, 4);
   const week = weeklyAdditions();
   const totals = siteTotals();
+  const editorial = listEditorial();
+  const osmTotal = ensureOsmVenues();
+  const recipesTotal = totals.recipes + editorial.length;
+  // Свежие внешние рецепты: в файле новые добавляются в конец
+  const editorialFresh = editorial.slice(-4).reverse();
+  const e0 = editorialFresh[0];
+  const num = (n: number) => n.toLocaleString("ru-RU").replace(/[\u00a0\u202f]/g, " ");
+  // Цифры на главной: только реальные и ненулевые, всегда три плашки
+  const heroStats: [string, string][] = (
+    [
+      ...(totals.chefs > 0 ? [[num(totals.chefs), `${plural(totals.chefs, "повар", "повара", "поваров")} на платформе`]] : []),
+      ...(totals.dishes > 0 ? [[num(totals.dishes), `${plural(totals.dishes, "блюдо", "блюда", "блюд")} в меню`]] : []),
+      ...(recipesTotal > 0 ? [[num(recipesTotal), plural(recipesTotal, "рецепт", "рецепта", "рецептов")]] : []),
+      ...(osmTotal > 0 ? [[num(osmTotal), `${plural(osmTotal, "заведение", "заведения", "заведений")} на карте`]] : []),
+      ["10%", "комиссия платформы"],
+    ] as [string, string][]
+  ).slice(0, 3);
 
   // Превью по одному элементу из каждого раздела: выпадают под полосой при наведении на счётчик
   const s0 = streams[0];
@@ -107,7 +127,21 @@ export default function Home() {
           ),
         }
       : null,
-    recipes: r0
+    recipes: !r0 && e0
+      ? {
+          href: "/recipes",
+          cta: "Все рецепты",
+          node: (
+            <Link href={`/recipes/e/${e0.slug}`} className={peekCard}>
+              <span className="block text-sm font-bold leading-snug">{e0.title}</span>
+              <span className="mt-0.5 block text-xs text-stone-500">
+                {e0.author}
+                {e0.timeMin !== null ? ` · ${e0.timeMin} мин` : ""}
+              </span>
+            </Link>
+          ),
+        }
+      : r0
       ? {
           href: "/recipes",
           cta: "Все рецепты",
@@ -157,15 +191,11 @@ export default function Home() {
             <div className="mt-4 flex flex-wrap gap-3">
               <Link href="/streams" className="btn bg-white/10 px-6 py-3 text-white ring-1 ring-white/25 hover:bg-white/20">
                 <span className="live-dot inline-block h-2 w-2 rounded-full bg-red-500" />
-                {liveCount > 0 ? `${liveCount} эфир${liveCount === 1 ? "" : "а"} сейчас` : "Стримы"}
+                {liveCount > 0 ? `${liveCount} ${plural(liveCount, "эфир", "эфира", "эфиров")} сейчас` : "Стримы"}
               </Link>
             </div>
             <div className="mt-10 grid grid-cols-3 gap-4 text-center sm:max-w-sm">
-              {[
-                ...(totals.chefs > 0 ? [[String(totals.chefs), "поваров на платформе"]] : []),
-                ...(totals.dishes > 0 ? [[String(totals.dishes), "блюд в меню"]] : []),
-                ["10%", "комиссия платформы"],
-              ].map(([n, label]) => (
+              {heroStats.map(([n, label]) => (
                 <div key={label} className="rounded-xl bg-white/5 px-2 py-3 ring-1 ring-white/10">
                   <div className="font-display text-xl text-yellow-300">{n}</div>
                   <div className="text-[11px] text-stone-400">{label}</div>
@@ -178,11 +208,19 @@ export default function Home() {
               <div className="font-display flex h-72 w-72 items-center justify-center rounded-full bg-white/5 text-[120px] text-yellow-300/70 ring-1 ring-white/10">
                 FW
               </div>
-              <div className="absolute -left-8 top-8 rounded-xl bg-white px-4 py-3 text-stone-900 shadow-xl">
-                <LiveBadge small /> <span className="ml-1 text-sm font-semibold">Карбонара вживую</span>
+              <div className="absolute -left-8 top-8 max-w-56 rounded-xl bg-white px-4 py-3 text-stone-900 shadow-xl">
+                {s0 && s0.status === "live" ? (
+                  <>
+                    <LiveBadge small /> <span className="ml-1 text-sm font-semibold">{s0.title}</span>
+                  </>
+                ) : (
+                  <span className="text-sm font-semibold">{num(recipesTotal)} {plural(recipesTotal, "рецепт", "рецепта", "рецептов")} с источниками</span>
+                )}
               </div>
-              <div className="absolute -right-6 bottom-10 rounded-xl bg-white px-4 py-3 text-stone-900 shadow-xl">
-                <span className="text-sm font-semibold">★ 4.9 · Нино Геловани</span>
+              <div className="absolute -right-6 bottom-10 max-w-56 rounded-xl bg-white px-4 py-3 text-stone-900 shadow-xl">
+                <span className="text-sm font-semibold">
+                  {c0 ? `★ ${c0.rating.toFixed(1)} · ${c0.name}` : `${num(osmTotal)} ${plural(osmTotal, "заведение", "заведения", "заведений")} на карте`}
+                </span>
               </div>
             </div>
           </div>
@@ -203,17 +241,32 @@ export default function Home() {
           )}
         </DrawerBlock>
         <DrawerBlock title="Лучшие повара недели" subtitle="Рейтинг считается по отзывам реальных заказов" href="/chefs" linkText="Все повара" badge={`+${week.chefs} за неделю`}>
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {chefs.map((c) => (
-              <ChefCardView key={c.id} chef={c} />
-            ))}
-          </div>
+          {chefs.length > 0 ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+              {chefs.map((c) => (
+                <ChefCardView key={c.id} chef={c} />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-stone-500">
+              Поваров пока нет.{" "}
+              <Link href="/register?role=chef" className="font-semibold text-orange-700 hover:underline">
+                Станьте первым
+              </Link>
+            </p>
+          )}
         </DrawerBlock>
         <DrawerBlock title="Свежие рецепты" subtitle="Повара делятся фирменными секретами" href="/recipes" linkText="Все рецепты" badge={`+${week.recipes} за неделю`}>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {recipes.map((r) => (
-              <RecipeCardView key={r.id} recipe={r} />
-            ))}
+            {recipes.length > 0
+              ? recipes.map((r) => <RecipeCardView key={r.id} recipe={r} />)
+              : editorialFresh.map((r) => (
+                  <Link key={r.slug} href={`/recipes/e/${r.slug}`} className="card block p-4 transition hover:ring-stone-400">
+                    <p className="font-bold leading-snug">{r.title}</p>
+                    <p className="mt-1 text-xs text-stone-500">{r.author}</p>
+                    {r.timeMin !== null && <span className="chip mt-2 bg-stone-100 text-stone-600">{r.timeMin} мин</span>}
+                  </Link>
+                ))}
           </div>
         </DrawerBlock>
       </HomeDrawer>
@@ -231,9 +284,12 @@ export default function Home() {
             <h3 className="font-display text-2xl">Готовите так, что соседи занимают очередь?</h3>
             <p className="mt-1 text-stone-300">Станьте поваром ForkWork: стримы, заказы и монетизация ваших рецептов.</p>
           </div>
-          <Link href="/register?role=chef" className="btn shrink-0 bg-yellow-400 px-6 py-3 text-stone-950 hover:bg-yellow-300">
-            Стать поваром
-          </Link>
+          <div className="flex shrink-0 flex-wrap justify-center gap-3">
+            <SellButton className="btn bg-white/10 px-6 py-3 text-white ring-1 ring-white/25 hover:bg-white/20" />
+            <Link href="/register?role=chef" className="btn bg-yellow-400 px-6 py-3 text-stone-950 hover:bg-yellow-300">
+              Стать поваром
+            </Link>
+          </div>
         </div>
       </section>
     </div>

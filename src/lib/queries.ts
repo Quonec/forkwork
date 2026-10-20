@@ -175,10 +175,11 @@ export function weeklyAdditions(days = 7): { recipes: number; chefs: number; str
 }
 
 /** Сколько всего поваров и блюд на платформе: для цифр на главной. */
-export function siteTotals(): { chefs: number; dishes: number } {
+export function siteTotals(): { chefs: number; dishes: number; recipes: number } {
   const one = (sql: string) => (db.prepare(sql).get() as { n: number }).n;
   return {
     chefs: one("SELECT COUNT(*) AS n FROM chefs c JOIN users u ON u.id = c.user_id WHERE u.blocked = 0"),
     dishes: one("SELECT COUNT(*) AS n FROM dishes WHERE available = 1"),
+    recipes: one("SELECT COUNT(*) AS n FROM recipes"),
   };
 }

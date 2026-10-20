@@ -6,6 +6,7 @@ import { useEffect, useRef, useState } from "react";
 import FanMenu, { type FanItem } from "./FanMenu";
 import { useCart } from "./cart";
 import { usePrefs } from "@/lib/prefs";
+import { mealAt, sellLabel } from "@/lib/meal";
 
 type Item = { href: string; label: string; icon: (active: boolean) => React.ReactNode };
 type Mode = "scan" | "map";
@@ -38,21 +39,19 @@ const LEFT: Item[] = [
   },
 ];
 
-const RIGHT: Item[] = [
-  {
-    href: "/cart",
-    label: "Корзина",
-    icon: (a) =>
-      svg(
-        a,
-        <>
-          <circle cx="9" cy="20" r="1.4" />
-          <circle cx="17" cy="20" r="1.4" />
-          <path d="M3 4h2.2l2.4 11.2a1.6 1.6 0 0 0 1.6 1.3h7.9a1.6 1.6 0 0 0 1.6-1.3L20.5 8H6" />
-        </>,
-      ),
-  },
-];
+/** Вместо корзины: «Продать завтрак / обед / ужин» по времени суток (корзина остаётся в шапке и плашке снизу). */
+const SELL: Item = {
+  href: "/sell",
+  label: "Продать блюдо",
+  icon: (a) =>
+    svg(
+      a,
+      <>
+        <path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8Z" />
+        <path d="M8 6.5v3M6.5 8h3" />
+      </>,
+    ),
+};
 
 /** Остальные разделы: раскрываются веером из кнопки «Ещё». Карта и сканер вынесены на центральную кнопку, в веере их нет. */
 const MORE: FanItem[] = [
@@ -103,6 +102,15 @@ export default function BottomNav({ role }: { role: string | null }) {
   const { count } = useCart();
   const [mode, setMode] = useState<Mode>("scan");
   const [more, setMore] = useState(false);
+  // Подпись по часам устройства — после гидрации, чтобы серверная и клиентская разметка совпали.
+  const [sellText, setSellText] = useState(SELL.label);
+  useEffect(() => {
+    const tick = () => setSellText(sellLabel(mealAt()));
+    tick();
+    const t = setInterval(tick, 60_000);
+    return () => clearInterval(t);
+  }, []);
+  const right: Item[] = [{ ...SELL, label: sellText }];
   const moreRef = useRef<HTMLButtonElement>(null);
   // Жесты на кнопке веера: нажатие раскрывает веер, зажатие или двойное нажатие открывает AI-агента
   const pressTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -174,7 +182,7 @@ export default function BottomNav({ role }: { role: string | null }) {
           {hand === "left" && <div aria-hidden="true" />}
           {left.map(renderItem)}
           <div aria-hidden="true" />
-          {RIGHT.map(renderItem)}
+          {right.map(renderItem)}
           {hand === "right" && <div aria-hidden="true" />}
         </div>
       </nav>
