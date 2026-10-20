@@ -3,6 +3,7 @@
 import { useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
+import { CHEF_PLANS, planPrice, type ChefPlan } from "@/lib/plans";
 
 function RegisterForm() {
   const router = useRouter();
@@ -15,6 +16,7 @@ function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [specialization, setSpecialization] = useState("");
+  const [plan, setPlan] = useState<ChefPlan>("free");
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -25,7 +27,7 @@ function RegisterForm() {
     const res = await fetch("/api/auth/register", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, email, password, role, specialization }),
+      body: JSON.stringify({ name, email, password, role, specialization, plan }),
     });
     const data = await res.json();
     setBusy(false);
@@ -65,6 +67,31 @@ function RegisterForm() {
           <p className="mt-0.5 text-xs text-stone-500">Курирую поваров и клиентов</p>
         </button>
       </div>
+
+      {role === "chef" && (
+        <div className="mt-4">
+          <p className="text-sm font-bold">Тариф повара</p>
+          <p className="text-xs text-stone-500">Сколько позиций можно держать в меню. Тариф меняется потом в кабинете.</p>
+          <div role="radiogroup" aria-label="Тариф повара" className="mt-2 grid grid-cols-3 gap-3">
+            {CHEF_PLANS.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                role="radio"
+                aria-checked={plan === p.id}
+                onClick={() => setPlan(p.id)}
+                className={`card p-3 text-left transition-all ${plan === p.id ? "ring-2 ring-orange-500" : "hover:ring-stone-300"}`}
+              >
+                <p className="font-bold">{p.label}</p>
+                <p className="mt-0.5 text-lg font-extrabold leading-tight">{p.dishes}</p>
+                <p className="text-[11px] text-stone-500">позиций в меню</p>
+                <p className="mt-1.5 text-xs font-semibold text-orange-700">{planPrice(p)}</p>
+              </button>
+            ))}
+          </div>
+          <p className="mt-1.5 text-[11px] text-stone-400">Оплата тарифов пока не подключена: выбранный тариф включается сразу.</p>
+        </div>
+      )}
 
       <form onSubmit={submit} className="card mt-4 space-y-4 p-6">
         <div>

@@ -8,9 +8,10 @@ import { StatusChip } from "@/components/StatusChip";
 import CameraStudio from "@/components/CameraStudio";
 import { Stranded } from "@/components/ui";
 import { ORDER_FLOW, ORDER_STATUS_RU, type CartItem } from "@/lib/types";
+import { CHEF_PLANS, planOf, planPrice } from "@/lib/plans";
 
 type KitchenData = {
-  profile: { id: number; bio: string; specialization: string; cuisineId: number | null; lat: number | null; lng: number | null; address: string; priceLevel: number; available: number; delivery: number; pickup: number; workHours: string };
+  profile: { id: number; bio: string; specialization: string; cuisineId: number | null; lat: number | null; lng: number | null; address: string; priceLevel: number; available: number; delivery: number; pickup: number; workHours: string; plan: string };
   dishes: { id: number; name: string; description: string; price: number; emoji: string; tags: string; available: number }[];
   recipes: { id: number; title: string; timeMin: number; difficulty: number; emoji: string }[];
   streams: { id: number; title: string; status: string; scheduledAt: string | null; startedAt: string | null; viewers: number; pinnedMessage: string }[];
@@ -165,7 +166,7 @@ function Kitchen() {
         </div>
       )}
 
-      {tab === "dishes" && <DishesTab dishes={data.dishes} act={act} />}
+      {tab === "dishes" && <DishesTab dishes={data.dishes} plan={profile.plan} act={act} />}
 
       {tab === "recipes" && <RecipesTab recipes={data.recipes} act={act} />}
 
@@ -280,10 +281,38 @@ function ReviewReply({ reviewId, act }: { reviewId: number; act: (b: Record<stri
   );
 }
 
-function DishesTab({ dishes, act }: { dishes: KitchenData["dishes"]; act: (b: Record<string, unknown>, n?: string) => Promise<boolean> }) {
+function DishesTab({ dishes, plan, act }: { dishes: KitchenData["dishes"]; plan: string; act: (b: Record<string, unknown>, n?: string) => Promise<boolean> }) {
   const [form, setForm] = useState({ name: "", description: "", price: 300, tags: "" });
+  const current = planOf(plan);
+  const full = dishes.length >= current.dishes;
   return (
     <div className="mt-6 grid gap-4 lg:grid-cols-[320px_1fr]">
+      <div className="space-y-4">
+      <div className="card space-y-2 p-5">
+        <div className="flex items-baseline justify-between gap-2">
+          <h3 className="font-bold">Тариф {current.label}</h3>
+          <span className={`text-xs font-bold ${full ? "text-red-600" : "text-stone-500"}`}>
+            {dishes.length} из {current.dishes} позиций
+          </span>
+        </div>
+        <div role="radiogroup" aria-label="Тариф" className="grid grid-cols-3 gap-1.5">
+          {CHEF_PLANS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              role="radio"
+              aria-checked={p.id === current.id}
+              onClick={() => p.id !== current.id && act({ action: "plan_set", plan: p.id }, `Тариф ${p.label}: до ${p.dishes} позиций`)}
+              className={`rounded-xl px-2 py-2 text-left ring-1 ${p.id === current.id ? "bg-stone-950 text-yellow-300 ring-stone-950" : "ring-stone-200 hover:ring-stone-400"}`}
+            >
+              <p className="text-xs font-bold">{p.label}</p>
+              <p className="text-[11px] opacity-80">{p.dishes} поз.</p>
+              <p className="text-[10px] opacity-70">{planPrice(p)}</p>
+            </button>
+          ))}
+        </div>
+        <p className="text-[11px] text-stone-400">Оплата тарифов пока не подключена: тариф меняется сразу.</p>
+      </div>
       <div className="card h-fit space-y-3 p-5">
         <h3 className="font-bold">Новое блюдо</h3>
         <input className="input" placeholder="Название" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} />
@@ -295,9 +324,12 @@ function DishesTab({ dishes, act }: { dishes: KitchenData["dishes"]; act: (b: Re
             if (await act({ action: "dish_add", ...form }, "Блюдо добавлено")) setForm({ name: "", description: "", price: 300, tags: "" });
           }}
           className="btn-primary w-full"
+          disabled={full}
+          title={full ? `Тариф ${current.label}: не больше ${current.dishes} позиций` : undefined}
         >
-          Добавить в меню
+          {full ? `Лимит тарифа: ${current.dishes} позиций` : "Добавить в меню"}
         </button>
+      </div>
       </div>
       <div className="space-y-3">
         {dishes.map((d) => (

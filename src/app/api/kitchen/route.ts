@@ -1,6 +1,7 @@
 import { db, nowIso } from "@/lib/db";
 import { json, err, requireUser, isResponse } from "@/lib/api";
 import { listChefReviews } from "@/lib/queries";
+import { isChefPlan, planOf } from "@/lib/plans";
 
 function chefOf(userId: number) {
   return db.prepare("SELECT id FROM chefs WHERE user_id = ?").get(userId) as { id: number } | undefined;
@@ -18,7 +19,7 @@ export async function GET() {
   const profileRow = db
     .prepare(
       `SELECT c.id, c.bio, c.specialization, c.cuisine_id AS cuisineId, c.lat, c.lng, c.address,
-        c.price_level AS priceLevel, c.available, c.delivery, c.pickup, c.work_hours AS workHours
+        c.price_level AS priceLevel, c.available, c.delivery, c.pickup, c.work_hours AS workHours, c.plan
        FROM chefs c WHERE c.id = ?`
     )
     .get(chefId) as Record<string, unknown>;
@@ -130,10 +131,18 @@ export async function POST(req: Request) {
       const name = String(body.name ?? "").trim().slice(0, 100);
       const price = Math.round(Number(body.price) || 0);
       if (!name || price < 10) return err("Название и цена (от 10 FC) обязательны");
+      const plan = planOf((db.prepare("SELECT plan FROM chefs WHERE id = ?").get(chefId) as { plan: string } | undefined)?.plan);
+      const used = (db.prepare("SELECT COUNT(*) AS n FROM dishes WHERE chef_id = ?").get(chefId) as { n: number }).n;
+      if (used >= plan.dishes) return err(`Тариф ${plan.label}: в меню не больше ${plan.dishes} позиций. Удалите блюдо или смените тариф.`);
       db.prepare(
         "INSERT INTO dishes (chef_id, name, description, price, emoji, tags, available, created_at) VALUES (?,?,?,?,?,?,1,?)"
       ).run(chefId, name, String(body.description ?? "").slice(0, 400), price,
         String(body.emoji ?? "").slice(0, 8), String(body.tags ?? "").slice(0, 200), t);
+      return json({ ok: true });
+    }
+    case "plan_set": {
+      if (!isChefPlan(body.plan)) return err("Неизвестный тариф");
+      db.prepare("UPDATE chefs SET plan = ? WHERE id = ?").run(body.plan, chefId);
       return json({ ok: true });
     }
     case "dish_toggle": {

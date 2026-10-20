@@ -4,6 +4,7 @@ import { createSession, getSessionUserOrGuest } from "@/lib/auth";
 import { isGuestEmail } from "@/lib/guest";
 import { json, err } from "@/lib/api";
 import { logEvent } from "@/lib/queries";
+import { DEFAULT_PLAN, isChefPlan } from "@/lib/plans";
 
 export async function POST(req: Request) {
   const body = await req.json().catch(() => null);
@@ -45,8 +46,8 @@ export async function POST(req: Request) {
 
   if (role === "chef") {
     // Профиль повара создаётся сразу, заполняется в кабинете
-    db.prepare("INSERT INTO chefs (user_id, bio, specialization) VALUES (?,?,?)").run(
-      userId, "", String(body.specialization ?? "").trim()
+    db.prepare("INSERT INTO chefs (user_id, bio, specialization, plan) VALUES (?,?,?,?)").run(
+      userId, "", String(body.specialization ?? "").trim(), isChefPlan(body.plan) ? body.plan : DEFAULT_PLAN
     );
   }
 

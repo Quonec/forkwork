@@ -488,6 +488,8 @@ function seed(db: DatabaseSync) {
     if (d % 2 === 0) insEvent.run("stream_view", lenaId, JSON.stringify({ streamId: sNino }), daysAgo(d));
     if (d % 3 === 0) insEvent.run("order_created", anyaId, JSON.stringify({ source: "stream" }), daysAgo(d));
   }
+  // Демо-повара с большим меню: тариф Work, чтобы лимит позиций не мешал показу.
+  db.exec("UPDATE chefs SET plan = 'work'");
 }
 
 // Идемпотентная миграция: гарантирует наличие менеджеров и их назначений даже
@@ -546,6 +548,16 @@ function migrate(db: DatabaseSync) {
   ensureColumn(db, "chats", "e2ee", "INTEGER NOT NULL DEFAULT 1");
   ensureColumn(db, "chat_messages", "vault", "INTEGER NOT NULL DEFAULT 0");
   db.exec("CREATE TABLE IF NOT EXISTS chat_hidden (message_id INTEGER NOT NULL, user_id INTEGER NOT NULL, PRIMARY KEY (message_id, user_id))");
+  // Тариф повара: free (3 позиции), single (10), work (50) — см. lib/plans.ts.
+  // Поварам, у которых меню уже больше лимита Free, при появлении колонки ставим подходящий тариф.
+  const hadPlan = (db.prepare("PRAGMA table_info(chefs)").all() as { name: string }[]).some((c) => c.name === "plan");
+  ensureColumn(db, "chefs", "plan", "TEXT NOT NULL DEFAULT 'free'");
+  if (!hadPlan) {
+    db.exec(`UPDATE chefs SET plan = CASE
+      WHEN (SELECT COUNT(*) FROM dishes d WHERE d.chef_id = chefs.id) > 10 THEN 'work'
+      WHEN (SELECT COUNT(*) FROM dishes d WHERE d.chef_id = chefs.id) > 3 THEN 'single'
+      ELSE 'free' END`);
+  }
 }
 
 /** Первый запуск в продакшене: только справочники и администратор из ADMIN_EMAIL / ADMIN_PASSWORD. */
