@@ -18,6 +18,7 @@ const GROUPS: { id: "all" | "platform" | EditorialCategory; label: string }[] = 
   { id: "media", label: "Из кино и игр" },
   { id: "trend", label: "Трендовые" },
   { id: "quick", label: "За 15 минут" },
+  { id: "quick30", label: "15–30 минут" },
 ];
 
 export default function RecipesList({ recipes, editorial }: { recipes: Recipe[]; editorial: EditorialRecipe[] }) {
