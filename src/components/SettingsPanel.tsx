@@ -104,7 +104,7 @@ export default function SettingsPanel() {
             ))}
           </div>
         </Row>
-        <Row title="Тон карты" note="Тёплый фильтр на карту Яндекса">
+        <Row title="Тон карты" note="Тёплый фильтр на карту Яндекса; в тёмной теме карта темнеет сама">
           <Seg
             label="Тон карты"
             value={p.mapTone}
