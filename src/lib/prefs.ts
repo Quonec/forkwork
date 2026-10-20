@@ -16,11 +16,13 @@ export type Prefs = {
   hand: "right" | "left";
   text: "normal" | "large";
   motion: "full" | "reduced";
+  /** тёплый фильтр на плитки карты Яндекса (метки поверх не окрашиваются) */
+  mapTone: "none" | "yellow" | "orange";
 };
 
 export const PREFS_KEY = "fw-prefs";
 export const PREFS_EVENT = "fw:prefs";
-export const DEFAULT_PREFS: Prefs = { theme: "auto", accent: "ochre", labels: true, hand: "right", text: "normal", motion: "full" };
+export const DEFAULT_PREFS: Prefs = { theme: "auto", accent: "ochre", labels: true, hand: "right", text: "normal", motion: "full", mapTone: "yellow" };
 
 /** Часы, в которые автотема светлая: с 7:00 до 20:00 по времени устройства. */
 export const DAY_FROM = 7;
@@ -44,6 +46,7 @@ export function parsePrefs(raw: string | null): Prefs {
       hand: pick(j.hand, ["right", "left"], "right"),
       text: pick(j.text, ["normal", "large"], "normal"),
       motion: pick(j.motion, ["full", "reduced"], "full"),
+      mapTone: pick(j.mapTone, ["none", "yellow", "orange"], "yellow"),
     };
   } catch {
     return DEFAULT_PREFS;
@@ -70,6 +73,7 @@ export function applyPrefs(p: Prefs) {
   el.dataset.hand = p.hand;
   el.dataset.text = p.text;
   el.dataset.motion = p.motion;
+  el.dataset.mapTone = p.mapTone;
   el.style.colorScheme = theme;
   document.querySelector('meta[name="theme-color"]')?.setAttribute("content", THEME_COLOR[theme]);
 }
@@ -111,4 +115,4 @@ export function usePrefs(): Prefs {
 }
 
 /** Однострочный скрипт для <head>: ставит тему до первой отрисовки, без вспышки светлого экрана. */
-export const PREFS_BOOT_SCRIPT = `(function(){try{var p=JSON.parse(localStorage.getItem(${JSON.stringify(PREFS_KEY)})||"null")||{};var h=new Date().getHours();var t=p.theme==="light"||p.theme==="dark"?p.theme:(h>=${DAY_FROM}&&h<${DAY_TO}?"light":"dark");var e=document.documentElement;e.dataset.theme=t;e.style.colorScheme=t;e.dataset.accent=p.accent||"ochre";e.dataset.labels=p.labels===false?"off":"on";e.dataset.hand=p.hand==="left"?"left":"right";e.dataset.text=p.text==="large"?"large":"normal";e.dataset.motion=p.motion==="reduced"?"reduced":"full"}catch(_){}})();`;
+export const PREFS_BOOT_SCRIPT = `(function(){try{var p=JSON.parse(localStorage.getItem(${JSON.stringify(PREFS_KEY)})||"null")||{};var h=new Date().getHours();var t=p.theme==="light"||p.theme==="dark"?p.theme:(h>=${DAY_FROM}&&h<${DAY_TO}?"light":"dark");var e=document.documentElement;e.dataset.theme=t;e.style.colorScheme=t;e.dataset.accent=p.accent||"ochre";e.dataset.labels=p.labels===false?"off":"on";e.dataset.hand=p.hand==="left"?"left":"right";e.dataset.text=p.text==="large"?"large":"normal";e.dataset.motion=p.motion==="reduced"?"reduced":"full";e.dataset.mapTone=p.mapTone==="none"||p.mapTone==="orange"?p.mapTone:"yellow"}catch(_){}})();`;

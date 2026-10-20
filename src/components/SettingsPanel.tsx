@@ -104,6 +104,18 @@ export default function SettingsPanel() {
             ))}
           </div>
         </Row>
+        <Row title="Тон карты" note="Тёплый фильтр на карту Яндекса">
+          <Seg
+            label="Тон карты"
+            value={p.mapTone}
+            onChange={(mapTone) => set({ mapTone })}
+            options={[
+              { id: "none", label: "Обычный" },
+              { id: "yellow", label: "Жёлтый" },
+              { id: "orange", label: "Оранжевый" },
+            ]}
+          />
+        </Row>
         <Row title="Текст">
           <Seg label="Размер текста" value={p.text} onChange={(text) => set({ text })} options={[{ id: "normal", label: "Обычный" }, { id: "large", label: "Крупный" }]} />
         </Row>
