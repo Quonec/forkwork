@@ -1,6 +1,6 @@
 {
   "name": "forkwork",
-  "version": "0.9.30",
+  "version": "0.9.31",
   "private": true,
   "engines": {
     "node": ">=22.5"

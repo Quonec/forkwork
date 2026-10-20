@@ -67,7 +67,7 @@ Foodtech-сайт на одной кодовой базе: сканер КБЖУ
 
 ## 6. Деплой и окружение
 
-- Сборка по `Dockerfile` (Node 24, два этапа), конфигурация `amvera.yaml`, порт 3000, том `/data` (база и секретное хранилище), `HEALTHCHECK` на `/api/health`.
+- Сборка по `Dockerfile` (Node 24, два этапа), конфигурация `amvera.yml`, порт 3000, том `/data` (база и секретное хранилище), `HEALTHCHECK` на `/api/health`.
 - Сайт собирается из `main` этого репозитория: любой пуш запускает пересборку (около 1–3 минут недоступности).
 - Основные переменные: `ADMIN_EMAIL`, `ADMIN_PASSWORD` (первый запуск), `ANTHROPIC_API_KEY`, `CHAT_VAULT_KEY`, `NEXT_PUBLIC_YANDEX_MAPS_API_KEY`, `NEXT_PUBLIC_SITE_URL`; флаги демо-режима `SEED_DEMO`, `NEXT_PUBLIC_SHOW_DEMO`, `NEXT_PUBLIC_SHOW_DEMO_STAFF` (описаны в `docs/DEPLOY.md`).
 - Файл CI (`.github/workflows`) в этот репозиторий не переносится (у токена публикации нет права `workflow`); он лежит в репозитории разработки.
